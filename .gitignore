@@ -1,0 +1,7 @@
+# Files
+WORTH.iml
+.DS_Store
+
+# Directories
+.idea/
+out/
