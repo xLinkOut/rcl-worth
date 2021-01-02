@@ -8,19 +8,19 @@ import java.nio.channels.SocketChannel;
 import java.util.Scanner;
 
 public class Client {
+    private static final String IP_SERVER = "127.0.0.1";
     private static final int PORT_TCP = 6789;
 
     public static void main(String[] args){
-        // Creo un nuovo SocketAddress alla porta specificata
-        SocketAddress socket = new InetSocketAddress(PORT_TCP);
-        // Creo esplicitamente il SocketChannel
+        // Creo un SocketChannel per stabilire una connessione TCP
         SocketChannel socketChannel;
 
         try {
-            // Con la sua .open()
+            // * TCP Setup
+            // Apro un nuovo SocketChannel
             socketChannel = SocketChannel.open();
             // Connetto al server sul canale appena creato
-            socketChannel.connect(socket);
+            socketChannel.connect(new InetSocketAddress(IP_SERVER, PORT_TCP));
             System.out.println("Connesso a: " + socketChannel.getRemoteAddress());
 
             Scanner scanner = new Scanner(System.in);
