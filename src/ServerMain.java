@@ -2,6 +2,7 @@
 
 import java.io.IOException;
 import java.net.ServerSocket;
+import java.nio.ByteBuffer;
 import java.nio.channels.*;
 import java.rmi.RemoteException;
 import java.net.InetSocketAddress;
@@ -10,6 +11,7 @@ import java.rmi.server.RemoteObject;
 import java.rmi.AlreadyBoundException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.server.UnicastRemoteObject;
+import java.util.Arrays;
 import java.util.Iterator;
 
 public class ServerMain extends RemoteObject implements Server, ServerRMI{
@@ -99,17 +101,26 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
                         ServerSocketChannel socket = (ServerSocketChannel) key.channel();
                         // Accetto la connessione
                         SocketChannel client = socket.accept();
-                        System.out.println("<" + client.getRemoteAddress() + ">: Connessione accettata");
+                        System.out.println("<" + client.getRemoteAddress() + ">: Connection accepted");
                         client.configureBlocking(false);
                         // Registro il nuovo client sul Selector
                         client.register(selector, SelectionKey.OP_READ, null);
                     }
 
-                } catch (ClosedChannelException e) {
-                    e.printStackTrace();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
+                    // Un canale pronto ad un'operazione di lettura
+                    else if (key.isReadable()) {
+                        SocketChannel client = (SocketChannel) key.channel();
+                        // Leggo il comando inviato dal client
+                        ByteBuffer buffer = ByteBuffer.allocate(1024);
+                        client.read(buffer);
+                        // Lo trasformo in un array, con una split sullo spazio vuoto
+                        // (Con la .trim() mi assicuro di eliminare spazi vuoti "inutili"
+                        String[] cmd = new String(buffer.array()).trim().split(" ");
+                        System.out.println(Arrays.toString(cmd));
+
+                    }
+
+                } catch (IOException e) { e.printStackTrace(); }
             }
         }
     }
