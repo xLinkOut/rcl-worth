@@ -1,5 +1,7 @@
 # Files
 TODO
+*.jar
+*.json
 WORTH.iml
 .DS_Store
 
