@@ -1,9 +1,10 @@
 // @author Luca Cirillo (545480)
 
 import java.io.IOException;
-import java.lang.reflect.Array;
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.rmi.NotBoundException;
 import java.rmi.registry.Registry;
 import java.nio.channels.SocketChannel;
@@ -14,9 +15,11 @@ public class ClientMain {
     // * TCP
     private static final int PORT_TCP = 6789;
     private static final String IP_SERVER = "127.0.0.1";
+    private static SocketChannel socketChannel; // TCP
     // * RMI
     private static final int PORT_RMI = 9876;
     private static final String NAME_RMI = "WORTH-SERVER";
+    private static ServerRMI server = null;
     // * CLIENT
     private static boolean logged = false;
     private static String username = "Guest";
@@ -26,10 +29,6 @@ public class ClientMain {
     public ClientMain(){ }
 
     private void run(){
-        // Creo un SocketChannel per stabilire una connessione TCP
-        SocketChannel socketChannel;
-        // Creo uno stub per usare RMI
-        ServerRMI server = null;
 
         try {
             // * TCP Setup
@@ -65,6 +64,7 @@ public class ClientMain {
             // * Registrazione e/o Login
             System.out.println("Login to use WORTH");
             while(!logged){
+                System.out.flush();
                 System.out.print(username+"@WORTH > ");
                 cmd = scanner.nextLine().split(" ");
                 if(cmd.length > 0){
@@ -74,17 +74,26 @@ public class ClientMain {
                                 if (server.register(cmd[1], cmd[2])) {
                                     // Registrazione avvenuta con successo
                                     System.out.println("Signup was successful!\n" +
-                                            "I try to automatically login to WORTH, wait..");
-                                    // TODO: login()
+                                        "I try to automatically login to WORTH, wait..");
+                                    if(login(cmd[1], cmd[2])){
+                                        logged = true;
+                                        username = cmd[1];
+                                        System.out.println("Great! Now your are logged as "+cmd[1]+"!");
+                                    }else{
+                                        System.err.println("Something went wrong during automatically login, try to manually login");
+                                    }
                                 } else {
                                     System.err.println("Username is already taken! Try with " + cmd[1] + "123 or X" + cmd[1] + "X");
                                 }
-                            } catch (ArrayIndexOutOfBoundsException | IllegalArgumentException e){
+                            } catch (IllegalArgumentException iae){
+                                System.err.println("Insert a valid " + iae.getMessage() +
+                                    "Usage: register username password");
+                            } catch (ArrayIndexOutOfBoundsException e){
                                 // Se almeno uno dei due parametri tra username e password
-                                // non è presente o risulta vuoto, informo l'utente
-                                // e stampo l'help del comando register
-                                System.err.println("Oops! It looks like you haven't entered username or password!");
-                                System.err.println("Usage: register username password");
+                                // non è presente o risulta vuoto, informo utente
+                                // e stampo help del comando register
+                                System.err.println("Oops! It looks like you haven't entered username or password!\n" +
+                                    "Usage: register username password");
                             }
                             break;
                         default:
@@ -97,6 +106,44 @@ public class ClientMain {
 
             // * Shell
         } catch (IOException e) { e.printStackTrace(); }
+    }
+
+    private boolean login(String username, String password){
+        try {
+            socketChannel.write(ByteBuffer.wrap(("login "+username+" "+password).getBytes(StandardCharsets.UTF_8)));
+            return readResponse().equals("ok");
+        } catch (IOException e) {e.printStackTrace(); return false;}
+    }
+
+    private String readResponse() throws IOException {
+        // Alloco un buffer di <DIM_BUFFER>
+        ByteBuffer msgBuffer = ByteBuffer.allocate(1024);
+        // Stringa corrispondente alla risposta del server
+        StringBuilder serverResponse = new StringBuilder();
+        // Quantità di bytes letti ad ogni chiamata della .read()
+        int bytesRead;
+
+        do {
+            // Svuoto il buffer
+            msgBuffer.clear();
+            // Leggo dal canale direttamente nel buffer
+            // e mi salvo la quantità di bytes letti
+            bytesRead = socketChannel.read(msgBuffer);
+            // Passo il buffer dalla modalità lettura a scrittura
+            msgBuffer.flip();
+            // Costruisco la risposta del server appendendoci
+            // la stringa letta (finora) dal canale
+            serverResponse.append(StandardCharsets.UTF_8.decode(msgBuffer).toString());
+            // Riporto il buffer in modalità lettura
+            msgBuffer.flip();
+
+            // Finché ci sono bytes da leggere, continuo
+        } while (bytesRead >= 1024);
+
+        // Alla fine, riporto il buffer in modalità scrittura
+        msgBuffer.flip();
+        System.out.println(serverResponse);
+        return serverResponse.toString();
     }
 
     public static void main(String[] args){
