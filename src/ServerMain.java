@@ -78,10 +78,13 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
         while (true) {
             try {
                 // Seleziona un insieme di keys che corrispondono a canali pronti ad eseguire operazioni
+                Thread.sleep(300); // Limita overhead mentre debuggo
                 selector.select();
             } catch (IOException ioe) {
                 ioe.printStackTrace();
                 break;
+            } catch (InterruptedException e) {
+                e.printStackTrace();
             }
 
             // Iteratore sui canali che risultano pronti
@@ -116,13 +119,24 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
                         // Lo trasformo in un array, con una split sullo spazio vuoto
                         // (Con la .trim() mi assicuro di eliminare spazi vuoti "inutili"
                         String[] cmd = new String(buffer.array()).trim().split(" ");
-                        System.out.println(Arrays.toString(cmd));
+                        //System.out.println(Arrays.toString(cmd));
 
                     }
 
                 } catch (IOException e) { e.printStackTrace(); }
             }
         }
+    }
+
+    public boolean register(String username, String password)
+        throws RemoteException{
+        // Controllo validità dei parametri
+        if(username.isEmpty() || password.isEmpty()) return false;
+        // Controllo che l'username non sia già utilizzato
+
+        // Registro l'utente nel "database"
+        System.out.println(username+password);
+        return true;
     }
 
     public static void main(String[] args){
