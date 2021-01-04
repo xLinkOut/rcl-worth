@@ -135,17 +135,16 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
     }
 
     public boolean register(String username, String password)
-        throws RemoteException{
-        // Controllo validità dei parametri, in teoria non c'è bisogno
-        //if(username.isEmpty() || password.isEmpty()) return false;
+        throws RemoteException, IllegalArgumentException{
+        // Controllo validità dei parametri
+        if(username.isEmpty()) throw new IllegalArgumentException("Username");
+        if(password.isEmpty()) throw new IllegalArgumentException("Password");
 
-        // Controllo che l'username non sia già utilizzato
-        if(Users.stream().anyMatch(user -> user.getUsername().equals(username))){
-            // E' già presente un utente con lo stesso username
+        // Controllo unicità username
+        if(Users.stream().anyMatch(user -> user.getUsername().equals(username)))
             return false;
-        }
 
-        // Registro l'utente nel "database"
+        // Registro utente nel database
         Users.add(new User(username, password));
         //String jsonNewUser = gson.toJson(newUser);
 

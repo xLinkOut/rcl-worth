@@ -70,22 +70,19 @@ public class ClientMain {
                 if(cmd.length > 0){
                     switch (cmd[0]){
                         case "register":
-                            try{
-                                // Switch case su codice di risposta
-                                if(cmd[1].isEmpty() || cmd[2].isEmpty()){
-                                    System.err.println("Uno dei due campi è vuoto occhio");
-                                }
-                                if(server.register(cmd[1],cmd[2])){
+                            try {
+                                if (server.register(cmd[1], cmd[2])) {
                                     // Registrazione avvenuta con successo
-                                    System.out.println("Registration was successful!\n"+
+                                    System.out.println("Signup was successful!\n" +
                                             "I try to automatically login to WORTH, wait..");
                                     // TODO: login()
-                                }else{
-                                    System.err.println("Username is already taken! Try with "+cmd[1]+"123 or X"+cmd[1]+"X");
+                                } else {
+                                    System.err.println("Username is already taken! Try with " + cmd[1] + "123 or X" + cmd[1] + "X");
                                 }
-                            } catch (ArrayIndexOutOfBoundsException aioobe){
+                            } catch (ArrayIndexOutOfBoundsException | IllegalArgumentException e){
                                 // Se almeno uno dei due parametri tra username e password
-                                // non è presente, informo l'utente e stampo l'help del comando register
+                                // non è presente o risulta vuoto, informo l'utente
+                                // e stampo l'help del comando register
                                 System.err.println("Oops! It looks like you haven't entered username or password!");
                                 System.err.println("Usage: register username password");
                             }
