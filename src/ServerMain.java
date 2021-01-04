@@ -1,5 +1,7 @@
 // @author Luca Cirillo (545480)
 
+import com.google.gson.Gson;
+
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.nio.ByteBuffer;
@@ -11,8 +13,9 @@ import java.rmi.server.RemoteObject;
 import java.rmi.AlreadyBoundException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.server.UnicastRemoteObject;
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 
 public class ServerMain extends RemoteObject implements Server, ServerRMI{
     // * TCP
@@ -22,9 +25,12 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
     private static final String NAME_RMI = "WORTH-SERVER";
     // * SERVER
     // TODO: boolean DEBUG
+    //private static final Gson gson = new Gson();
+    private List<User> Users;
 
     public ServerMain(){
         // Persistenza
+        this.Users = new ArrayList<>();
     }
 
     private void live() {
@@ -130,12 +136,20 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
 
     public boolean register(String username, String password)
         throws RemoteException{
-        // Controllo validità dei parametri
-        if(username.isEmpty() || password.isEmpty()) return false;
+        // Controllo validità dei parametri, in teoria non c'è bisogno
+        //if(username.isEmpty() || password.isEmpty()) return false;
+
         // Controllo che l'username non sia già utilizzato
+        if(Users.stream().anyMatch(user -> user.getUsername().equals(username))){
+            // E' già presente un utente con lo stesso username
+            return false;
+        }
 
         // Registro l'utente nel "database"
-        System.out.println(username+password);
+        Users.add(new User(username, password));
+        //String jsonNewUser = gson.toJson(newUser);
+
+        System.out.println("register("+username+","+password+")");
         return true;
     }
 
