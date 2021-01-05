@@ -26,7 +26,7 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
     // * SERVER
     // TODO: boolean DEBUG
     //private static final Gson gson = new Gson();
-    private List<User> Users;
+    private final List<User> Users;
 
     public ServerMain(){
         // Persistenza

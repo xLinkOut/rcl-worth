@@ -42,6 +42,10 @@ public class ClientMain {
         \tlogin username password |\tLogin to WORTH using your credentials;
         \thelp |\tShow this help;
         \tquit |\tClose WORTH.""";
+    private static final String msgHelp =
+        """
+        Bro, you stuck?            
+        """;
 
     public ClientMain(){ }
 
@@ -150,6 +154,27 @@ public class ClientMain {
             }
 
             // * Shell
+            while(true){
+                System.out.print(username+"@WORTH > ");
+                cmd = scanner.nextLine().split(" ");
+                if(cmd.length > 0){
+                    switch (cmd[0]){
+                        case "help":
+                            System.out.println(msgHelp);
+                            break;
+                        case "quit":
+                            System.out.println("Hope to see you soon,"+username+"!");
+                            // Fare logout?
+                            System.exit(0);
+                            break;
+                        default:
+                            System.err.println("Command not recognized or not available as a guest, please login.");
+                    }
+                }else{
+                    System.out.println(msgHelpGuest);
+                }
+            }
+
         } catch (IOException e) { e.printStackTrace(); }
     }
 
