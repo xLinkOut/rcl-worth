@@ -239,6 +239,25 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
         return true;
     }
 
+    private boolean logout(String username)
+        throws IllegalArgumentException{
+        // Controllo validità dei parametri
+        if(username.isEmpty()) throw new IllegalArgumentException("username");
+
+        // Controllo l'esistenza dell'utente
+        // TODO Eccezione user not found?
+        if(!userExists(username)) return false;
+
+        // Limito l'overhead non facendo controlli
+        // in quanto, se arriva un comando di logout
+        // sicuramente l'utente ha fatto un login
+        // precedentemente, per come il client è implementato
+        // (Sono sicuro che utente esista)
+        //noinspection OptionalGetWithoutIsPresent
+        getUser(username).get().setStatus(User.Status.OFFLINE);
+        return true;
+    }
+
     private boolean userExists(String username){
         return Users.stream().anyMatch(user -> user.getUsername().equals(username));
     }
