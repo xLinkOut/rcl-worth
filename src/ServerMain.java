@@ -88,18 +88,14 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
             System.exit(-2);
         }
 
-        // Serve forever
+        // * LIVE
         while (true) {
             try {
                 // Seleziona un insieme di keys che corrispondono a canali pronti ad eseguire operazioni
                 Thread.sleep(300); // Limita overhead mentre debuggo
                 selector.select();
-            } catch (IOException ioe) {
-                ioe.printStackTrace();
-                break;
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
+            } catch (IOException ioe) { ioe.printStackTrace(); break;
+            } catch (InterruptedException e) { e.printStackTrace(); }
 
             // Iteratore sui canali che risultano pronti
             Iterator<SelectionKey> iterator = selector.selectedKeys().iterator();
@@ -163,14 +159,12 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
                             key.interestOps(SelectionKey.OP_READ);
                         }
                     }
-
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
+                } catch (IOException e) { e.printStackTrace(); }
             }
         }
     }
 
+    // * ENDPOINTS
     public boolean register(String username, String password)
         throws RemoteException, IllegalArgumentException{
         // Controllo validità dei parametri
@@ -185,43 +179,9 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
         // TODO: Valutare unmodifieble list
         PublicUsers.add(new PublicUser(username));
         //String jsonNewUser = gson.toJson(newUser);
-        update();
+        sendCallbacks();
         System.out.println("register("+username+","+password+")");
         return true;
-    }
-
-    @Override
-    public synchronized void registerCallback(NotifyEventInterface clientInterface)
-            throws RemoteException {
-        if(!clients.contains(clientInterface)) {
-            clients.add(clientInterface);
-            System.out.println("New client registered for callbacks");
-            synchronized (PublicUsers){
-                clientInterface.notifyEvent(PublicUsers);
-            }
-        }
-
-    }
-
-    @Override
-    public synchronized void unregisterCallback(NotifyEventInterface clientInterface) throws RemoteException {
-        if(clients.remove(clientInterface)){
-            System.out.println("Client unregistered");
-        }else{
-            System.out.println("Unable to unregister client");
-        }
-    }
-
-    public void update() throws RemoteException{
-        doCallbacks();
-    }
-
-    public synchronized void doCallbacks() throws RemoteException{
-        System.out.println("Starting callbacks...");
-        for (NotifyEventInterface client : clients) {
-            client.notifyEvent(PublicUsers);
-        }
-        System.out.println("Callbacks complete");
     }
 
     @SuppressWarnings("OptionalGetWithoutIsPresent")
@@ -241,7 +201,7 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
         getUser(username).get().setStatus(User.Status.ONLINE);
 
         // Aggiorno tutti gli altri clients con una callback
-        try { update(); }
+        try { sendCallbacks(); }
         catch (RemoteException e) {e.printStackTrace();}
 
         return true;
@@ -265,12 +225,13 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
         getUser(username).get().setStatus(User.Status.OFFLINE);
 
         // Aggiorno tutti gli altri clients con una callback
-        try { update(); }
+        try { sendCallbacks(); }
         catch (RemoteException e) {e.printStackTrace();}
 
         return true;
     }
 
+    // * UTILS
     private boolean userExists(String username){
         return Users.stream().anyMatch(user -> user.getUsername().equals(username));
     }
@@ -279,6 +240,33 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
         return Users.stream().filter(user -> user.getUsername().equals(username)).findFirst();
     }
 
+    // * CALLBACKS
+    @Override
+    public synchronized void registerCallback(NotifyEventInterface clientInterface)
+            throws RemoteException {
+        if(!clients.contains(clientInterface)) {
+            clients.add(clientInterface);
+            System.out.println("New client registered for callbacks");
+            synchronized (PublicUsers){
+                clientInterface.notifyEvent(PublicUsers);
+            }
+        }
+    }
+
+    @Override
+    public synchronized void unregisterCallback(NotifyEventInterface clientInterface) throws RemoteException {
+        if(clients.remove(clientInterface)) System.out.println("Client unregistered");
+        else System.out.println("Unable to unregister client");
+    }
+
+    public synchronized void sendCallbacks() throws RemoteException{
+        //System.out.println("Starting callbacks...");
+        for (NotifyEventInterface client : clients)
+            client.notifyEvent(PublicUsers);
+        //System.out.println("Callbacks complete");
+    }
+
+    // * MAIN
     public static void main(String[] args){
         ServerMain server = new ServerMain();
         server.live();
