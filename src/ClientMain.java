@@ -12,6 +12,7 @@ import java.nio.channels.SocketChannel;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.server.RemoteObject;
 import java.rmi.server.UnicastRemoteObject;
+import java.util.List;
 import java.util.Scanner;
 
 public class ClientMain extends RemoteObject implements NotifyEventInterface {
@@ -27,6 +28,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
     // * CLIENT
     private static boolean logged = false;
     private static String username = "Guest";
+    private static List PublicUsers;
 
     // * MESSAGES
     private static final String msgStartup =
@@ -192,8 +194,11 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
 
     private boolean login(String username, String password){
         try {
+            // Invio al server il comando di login con le credenziali
             socketChannel.write(ByteBuffer.wrap(("login "+username+" "+password).getBytes(StandardCharsets.UTF_8)));
+            // Registro il client per la ricezione delle callback
             server.registerCallback(notifyStub);
+            // Se tutto ok, ritorno true
             return readResponse().equals("ok");
         } catch (IOException e) {e.printStackTrace(); return false;}
     }
@@ -235,7 +240,8 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
     }
 
     @Override
-    public void notifyEvent(int value) throws RemoteException {
-        System.out.println("Update event received: "+value);
+    public void notifyEvent(List PublicUsers) throws RemoteException {
+        ClientMain.PublicUsers = PublicUsers;
+        System.out.println(ClientMain.PublicUsers);
     }
 }

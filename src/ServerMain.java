@@ -28,6 +28,7 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
     // TODO: boolean DEBUG
     //private static final Gson gson = new Gson();
     private final List<User> Users;
+    private final List<PublicUser> PublicUsers;
     private final List<NotifyEventInterface> clients;
 
     public ServerMain(){
@@ -37,6 +38,7 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
 
         // Persistenza
         this.Users = new ArrayList<>();
+        this.PublicUsers = new ArrayList<>();
     }
 
     private void live() {
@@ -86,22 +88,6 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
             System.exit(-2);
         }
 
-        int val = 0;
-        while (val != 10000) {
-            val = (int) (Math.random() * 1000);
-            System.out.println("nuovo update" + val);
-            try {
-                update(val);
-            } catch (RemoteException e) {
-                e.printStackTrace();
-            }
-            try {
-                Thread.sleep(1500);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
-
         // Serve forever
         while (true) {
             try {
@@ -124,6 +110,7 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
                 // La rimuovo esplicitamente dall'iteratore
                 iterator.remove();
 
+                // TODO: staccare client disconnesso
                 // Se la key considerata identifica:
                 try {
 
@@ -193,6 +180,8 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
 
         // Registro utente nel database
         Users.add(new User(username, password));
+        // TODO: Valutare unmodifieble list
+        PublicUsers.add(new PublicUser(username, User.Status.ONLINE));
         //String jsonNewUser = gson.toJson(newUser);
 
         System.out.println("register("+username+","+password+")");
@@ -205,6 +194,9 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
         if(!clients.contains(clientInterface)) {
             clients.add(clientInterface);
             System.out.println("New client registered for callbacks");
+            synchronized (PublicUsers){
+                clientInterface.notifyEvent(PublicUsers);
+            }
         }
 
     }
@@ -218,16 +210,14 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
         }
     }
 
-    public void update(int value) throws RemoteException{
-        doCallbacks(value);
+    public void update() throws RemoteException{
+        doCallbacks();
     }
 
-    public synchronized void doCallbacks(int value) throws RemoteException{
+    public synchronized void doCallbacks() throws RemoteException{
         System.out.println("Starting callbacks...");
-        Iterator i = clients.iterator();
-        while(i.hasNext()){
-            NotifyEventInterface client = (NotifyEventInterface) i.next();
-            client.notifyEvent(value);
+        for (NotifyEventInterface client : clients) {
+            client.notifyEvent(PublicUsers);
         }
         System.out.println("Callbacks complete");
     }
