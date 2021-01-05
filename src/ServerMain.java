@@ -181,9 +181,9 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
         // Registro utente nel database
         Users.add(new User(username, password));
         // TODO: Valutare unmodifieble list
-        PublicUsers.add(new PublicUser(username, User.Status.ONLINE));
+        PublicUsers.add(new PublicUser(username));
         //String jsonNewUser = gson.toJson(newUser);
-
+        update();
         System.out.println("register("+username+","+password+")");
         return true;
     }

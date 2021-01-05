@@ -10,6 +10,10 @@ public class PublicUser implements Serializable {
         this.status = status;
     }
 
+    public PublicUser(String username){
+        this.username = username;
+        this.status = User.Status.OFFLINE;
+    }
 
     public String getUsername() {
         return username;
