@@ -171,6 +171,15 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
                 cmd = scanner.nextLine().split(" ");
                 if(cmd.length > 0){
                     switch (cmd[0]){
+                        case "logout":
+                            if(logout()){
+                                logged = false;
+                                username = "Guest";
+                                PublicUsers.clear();
+                                System.out.println("You have been logged out successfully");
+                            }else{
+                                System.err.println("Uhm, something went wrong. Try again please!");
+                            }
                         case "help":
                             System.out.println(msgHelp);
                             break;
@@ -201,6 +210,17 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
             // Se tutto ok, ritorno true
             return readResponse().equals("ok");
         } catch (IOException e) {e.printStackTrace(); return false;}
+    }
+
+    private boolean logout(){
+        try{
+            // Invio al server il comando di logout
+            sendRequest("logout "+username);
+            // Disiscrivo il client dalla ricezione delle callbacks
+            server.unregisterCallback(notifyStub);
+            // Se tutto ok, ritorno true
+            return readResponse().equals("ok");
+        } catch (IOException e) { e.printStackTrace(); return false; }
     }
 
     private void sendRequest(String request) throws IOException {

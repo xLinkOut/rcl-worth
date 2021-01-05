@@ -236,6 +236,10 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
         //noinspection OptionalGetWithoutIsPresent
         getUser(username).get().setStatus(User.Status.ONLINE);
 
+        // Aggiorno tutti gli altri clients con una callback
+        try { update(); }
+        catch (RemoteException e) {e.printStackTrace();}
+
         return true;
     }
 
@@ -255,6 +259,11 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
         // (Sono sicuro che utente esista)
         //noinspection OptionalGetWithoutIsPresent
         getUser(username).get().setStatus(User.Status.OFFLINE);
+
+        // Aggiorno tutti gli altri clients con una callback
+        try { update(); }
+        catch (RemoteException e) {e.printStackTrace();}
+
         return true;
     }
 
