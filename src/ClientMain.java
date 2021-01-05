@@ -25,11 +25,23 @@ public class ClientMain {
     private static String username = "Guest";
 
     // * MESSAGES
+    private static final String msgStartup =
+        """
+        
+        ██╗    ██╗ ██████╗ ██████╗ ████████╗██╗  ██╗
+        ██║    ██║██╔═══██╗██╔══██╗╚══██╔══╝██║  ██║
+        ██║ █╗ ██║██║   ██║██████╔╝   ██║   ███████║
+        ██║███╗██║██║   ██║██╔══██╗   ██║   ██╔══██║
+        ╚███╔███╔╝╚██████╔╝██║  ██║   ██║   ██║  ██║
+         ╚══╝╚══╝  ╚═════╝ ╚═╝  ╚═╝   ╚═╝   ╚═╝  ╚═╝
+                                                   \s""";
 
     public ClientMain(){ }
 
     private void run(){
-
+        // Messaggio di avvio
+        System.out.println(msgStartup);
+        
         try {
             // * TCP Setup
             try{
@@ -55,7 +67,6 @@ public class ClientMain {
                 System.exit(-1);
             }
 
-            // TODO: Welcome message?
 
             // * CLI Setup
             Scanner scanner = new Scanner(System.in);
