@@ -195,12 +195,16 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
     private boolean login(String username, String password){
         try {
             // Invio al server il comando di login con le credenziali
-            socketChannel.write(ByteBuffer.wrap(("login "+username+" "+password).getBytes(StandardCharsets.UTF_8)));
+            sendRequest("login "+username+" "+password);
             // Registro il client per la ricezione delle callback
             server.registerCallback(notifyStub);
             // Se tutto ok, ritorno true
             return readResponse().equals("ok");
         } catch (IOException e) {e.printStackTrace(); return false;}
+    }
+
+    private void sendRequest(String request) throws IOException {
+        socketChannel.write(ByteBuffer.wrap((request).getBytes(StandardCharsets.UTF_8)));
     }
 
     private String readResponse() throws IOException {
