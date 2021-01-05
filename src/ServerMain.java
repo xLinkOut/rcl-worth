@@ -137,8 +137,10 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
                         if (cmd.length > 0) {
                             switch (cmd[0]) {
                                 case "login":
-                                    if (login(cmd[1], cmd[2]))
-                                        key.attach("ok");
+                                    if (login(cmd[1], cmd[2])) key.attach("ok");
+                                    break;
+                                case "logout":
+                                    if(logout(cmd[1])) key.attach("ok");
                                     break;
                             }
                         }
