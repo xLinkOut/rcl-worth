@@ -6,12 +6,15 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.rmi.NotBoundException;
+import java.rmi.RemoteException;
 import java.rmi.registry.Registry;
 import java.nio.channels.SocketChannel;
 import java.rmi.registry.LocateRegistry;
+import java.rmi.server.RemoteObject;
+import java.rmi.server.UnicastRemoteObject;
 import java.util.Scanner;
 
-public class ClientMain {
+public class ClientMain extends RemoteObject implements NotifyEventInterface {
     // * TCP
     private static final int PORT_TCP = 6789;
     private static final String IP_SERVER = "127.0.0.1";
@@ -20,6 +23,7 @@ public class ClientMain {
     private static final int PORT_RMI = 9876;
     private static final String NAME_RMI = "WORTH-SERVER";
     private static ServerRMI server = null;
+    private static NotifyEventInterface notifyStub;
     // * CLIENT
     private static boolean logged = false;
     private static String username = "Guest";
@@ -47,7 +51,9 @@ public class ClientMain {
         Bro, you stuck?            
         """;
 
-    public ClientMain(){ }
+    public ClientMain(){
+        super(); // Callback
+    }
 
     private void run(){
         // Messaggio di avvio
@@ -66,13 +72,17 @@ public class ClientMain {
                 System.exit(-1);
             }
 
-            // * RMI Setup
+            // * RMI & CALLBACK Setup
             try{
                 // Creo un registry sulla porta RMI
                 Registry registry = LocateRegistry.getRegistry(PORT_RMI);
                 // Chiamo la lookup sullo stesso nome del server
                 server = (ServerRMI) registry.lookup(NAME_RMI);
                 System.out.println("[RMI] Connected to: " + server.toString());
+                // Esporto l'oggetto Client per le callback
+                notifyStub = (NotifyEventInterface)
+                        UnicastRemoteObject.exportObject(this,0);
+                //server.registerCallback(stub);
             } catch (NotBoundException nbe) {
                 System.err.println("[RMI] connection refused, are you sure that server is up?");
                 System.exit(-1);
@@ -175,12 +185,15 @@ public class ClientMain {
                 }
             }
 
+            // unregisterCallback
+            // socketChannel close
         } catch (IOException e) { e.printStackTrace(); }
     }
 
     private boolean login(String username, String password){
         try {
             socketChannel.write(ByteBuffer.wrap(("login "+username+" "+password).getBytes(StandardCharsets.UTF_8)));
+            server.registerCallback(notifyStub);
             return readResponse().equals("ok");
         } catch (IOException e) {e.printStackTrace(); return false;}
     }
@@ -219,5 +232,10 @@ public class ClientMain {
     public static void main(String[] args){
         ClientMain client = new ClientMain();
         client.run();
+    }
+
+    @Override
+    public void notifyEvent(int value) throws RemoteException {
+        System.out.println("Update event received: "+value);
     }
 }

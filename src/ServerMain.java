@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.Optional;
 
 public class ServerMain extends RemoteObject implements Server, ServerRMI{
+
     // * TCP
     private static final int PORT_TCP = 6789;
     // * RMI
@@ -27,8 +28,13 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
     // TODO: boolean DEBUG
     //private static final Gson gson = new Gson();
     private final List<User> Users;
+    private final List<NotifyEventInterface> clients;
 
     public ServerMain(){
+        // Callback
+        super();
+        clients = new ArrayList<>();
+
         // Persistenza
         this.Users = new ArrayList<>();
     }
@@ -80,6 +86,22 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
             System.exit(-2);
         }
 
+        int val = 0;
+        while (val != 10000) {
+            val = (int) (Math.random() * 1000);
+            System.out.println("nuovo update" + val);
+            try {
+                update(val);
+            } catch (RemoteException e) {
+                e.printStackTrace();
+            }
+            try {
+                Thread.sleep(1500);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+
         // Serve forever
         while (true) {
             try {
@@ -125,10 +147,10 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
                         // Lo trasformo in un array, con una split sullo spazio vuoto
                         // (Con la .trim() mi assicuro di eliminare spazi vuoti "inutili"
                         String[] cmd = new String(buffer.array()).trim().split(" ");
-                        if(cmd.length > 0){
-                            switch (cmd[0]){
+                        if (cmd.length > 0) {
+                            switch (cmd[0]) {
                                 case "login":
-                                    if(login(cmd[1],cmd[2]))
+                                    if (login(cmd[1], cmd[2]))
                                         key.attach("ok");
                                     break;
                             }
@@ -137,15 +159,15 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
                     }
 
                     // Un canale pronto per un'operazione di scrittura
-                    else if(key.isWritable()) {
+                    else if (key.isWritable()) {
                         SocketChannel client = (SocketChannel) key.channel();
                         String msg = (String) key.attachment();
-                        if(msg == null){
+                        if (msg == null) {
                             // Client disconnesso
                             key.cancel();
                             key.channel().close();
                             // TODO: Status offline
-                        }else{
+                        } else {
                             // Invio di una risposta
                             client.write(ByteBuffer.wrap(msg.getBytes(StandardCharsets.UTF_8)));
                             key.attach(null);
@@ -153,7 +175,9 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
                         }
                     }
 
-                } catch (IOException e) { e.printStackTrace(); }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
             }
         }
     }
@@ -173,6 +197,39 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
 
         System.out.println("register("+username+","+password+")");
         return true;
+    }
+
+    @Override
+    public synchronized void registerCallback(NotifyEventInterface clientInterface)
+            throws RemoteException {
+        if(!clients.contains(clientInterface)) {
+            clients.add(clientInterface);
+            System.out.println("New client registered for callbacks");
+        }
+
+    }
+
+    @Override
+    public synchronized void unregisterCallback(NotifyEventInterface clientInterface) throws RemoteException {
+        if(clients.remove(clientInterface)){
+            System.out.println("Client unregistered");
+        }else{
+            System.out.println("Unable to unregister client");
+        }
+    }
+
+    public void update(int value) throws RemoteException{
+        doCallbacks(value);
+    }
+
+    public synchronized void doCallbacks(int value) throws RemoteException{
+        System.out.println("Starting callbacks...");
+        Iterator i = clients.iterator();
+        while(i.hasNext()){
+            NotifyEventInterface client = (NotifyEventInterface) i.next();
+            client.notifyEvent(value);
+        }
+        System.out.println("Callbacks complete");
     }
 
     private boolean login(String username, String password)
