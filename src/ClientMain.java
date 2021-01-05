@@ -35,13 +35,20 @@ public class ClientMain {
         ╚███╔███╔╝╚██████╔╝██║  ██║   ██║   ██║  ██║
          ╚══╝╚══╝  ╚═════╝ ╚═╝  ╚═╝   ╚═╝   ╚═╝  ╚═╝
                                                    \s""";
+    private static final String msgHelpGuest =
+        """
+        You need to login to WORTH in order to use it.
+        \tregister username password |\tCreate a new WORTH account;
+        \tlogin username password |\tLogin to WORTH using your credentials;
+        \thelp |\tShow this help;
+        \tquit |\tClose WORTH.""";
 
     public ClientMain(){ }
 
     private void run(){
         // Messaggio di avvio
         System.out.println(msgStartup);
-        
+
         try {
             // * TCP Setup
             try{
@@ -73,9 +80,8 @@ public class ClientMain {
             String[] cmd;
 
             // * Registrazione e/o Login
-            System.out.println("Login to use WORTH");
+            System.out.println(msgHelpGuest);
             while(!logged){
-                System.out.flush();
                 System.out.print(username+"@WORTH > ");
                 cmd = scanner.nextLine().split(" ");
                 if(cmd.length > 0){
@@ -107,11 +113,39 @@ public class ClientMain {
                                     "Usage: register username password");
                             }
                             break;
+                        case "login":
+                            try {
+                                if (login(cmd[1], cmd[2])) {
+                                    logged = true;
+                                    username = cmd[1];
+                                    System.out.println("Great! Now your are logged as " + cmd[1] + "!");
+                                } else {
+                                    System.err.println("Are you sure that an account with this name exists?\n" +
+                                            "If you need one, use register command");
+                                }
+                            } catch (IllegalArgumentException iae){
+                                    System.err.println("Insert a valid " + iae.getMessage() +
+                                            "Usage: register username password");
+                                } catch (ArrayIndexOutOfBoundsException e){
+                                    // Se almeno uno dei due parametri tra username e password
+                                    // non è presente o risulta vuoto, informo utente
+                                    // e stampo help del comando register
+                                    System.err.println("Oops! It looks like you haven't entered username or password!\n" +
+                                            "Usage: login username password");
+                                }
+                            break;
+                        case "help":
+                            System.out.println(msgHelpGuest);
+                            break;
+                        case "quit":
+                            System.out.println("Hope to see you soon,"+username+"!");
+                            System.exit(0);
+                            break;
                         default:
-                            System.err.println("Comando non riconosciuto o non disponibile da ospite, si prega di effettuare il login");
+                            System.err.println("Command not recognized or not available as a guest, please login.");
                     }
                 }else{
-                    System.err.println("Si prega di inserire un comando");
+                    System.out.println(msgHelpGuest);
                 }
             }
 
