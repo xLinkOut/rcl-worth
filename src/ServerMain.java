@@ -224,6 +224,7 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
         System.out.println("Callbacks complete");
     }
 
+    @SuppressWarnings("OptionalGetWithoutIsPresent")
     private boolean login(String username, String password)
         throws IllegalArgumentException{
         // Controllo validità dei parametri
@@ -233,9 +234,10 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
         // Controllo l'esistenza dell'utente
         if(!userExists(username)) return false;
 
+        // Controllo se la password è corretta
+        if(!getUser(username).get().getPassword().equals(password)) return false;
+
         // Aggiorno il suo stato su Online
-        // (Sono sicuro che utente esista)
-        //noinspection OptionalGetWithoutIsPresent
         getUser(username).get().setStatus(User.Status.ONLINE);
 
         // Aggiorno tutti gli altri clients con una callback
