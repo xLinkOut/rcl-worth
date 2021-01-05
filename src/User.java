@@ -1,11 +1,10 @@
 public class User {
 
-
     public enum Status { OFFLINE, ONLINE } // 0 = Offline, 1 = Online
 
-    private Status status = Status.OFFLINE; // da ignorare nel json
     private final String username;
     private final String password;
+    private Status status = Status.OFFLINE; // da ignorare nel json
 
     // TODO: set status on create
     // TODO: hash password
