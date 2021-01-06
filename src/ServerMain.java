@@ -115,7 +115,7 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
                         ServerSocketChannel socket = (ServerSocketChannel) key.channel();
                         // Accetto la connessione
                         SocketChannel client = socket.accept();
-                        System.out.println("<" + client.getRemoteAddress() + ">: Connection accepted");
+                        System.out.println("<" + client.getRemoteAddress() + ">: TCP Accepted");
                         client.configureBlocking(false);
                         // Registro il nuovo client sul Selector
                         client.register(selector, SelectionKey.OP_READ, null);

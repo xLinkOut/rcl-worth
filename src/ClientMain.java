@@ -174,19 +174,23 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
                 cmd = scanner.nextLine().split(" ");
                 if(cmd.length > 0){
                     switch (cmd[0]){
-                        case "register":
+                        case "register": // RMI
                             System.out.println("You are already logged in! Logout first, if you want to create another WORTH account");
                             break;
-                        case "login":
+                        case "login": // TCP
                             System.out.println("You are already logged in! Logout first, if you want to login with another WORTH account");
                             break;
-                        case "logout":
-                            if(logout()){
-                                System.out.println("You have been logged out successfully");
-                            }else{
-                                System.out.println("Uhm, something went wrong. Try again please!");
-                            }
+                        case "logout": // TCP
+                            if(logout()) System.out.println("You have been logged out successfully");
+                            else System.out.println("Uhm, something went wrong. Try again please!");
                             break;
+
+                        case "listUsers": // LOCAL, UPDATE BY RMI CALLBACK
+                            break;
+                        case "listOnlineusers": // LOCAL, UPDATE BY RMI CALLBACK
+                            break;
+
+
                         case "help":
                             System.out.println(msgHelp);
                             break;
@@ -212,13 +216,13 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
         try {
             // Invio al server il comando di login con le credenziali
             sendRequest("login "+username+" "+password);
-            // Registro il client per la ricezione delle callback
-            server.registerCallback(notifyStub);
-            // Se tutto ok, aggiorno i parametri
-            // del client e ritorno true
+            // Se tutto ok, aggiorno i parametri, registro il client
+            // per le callbacks e ritorno true
             if(readResponse().equals("ok")){
                 logged = true;
                 ClientMain.username = username;
+                // Registro il client per la ricezione delle callback
+                server.registerCallback(notifyStub);
                 return true;
             }else{ return false; }
         } catch (IOException e) {e.printStackTrace(); return false;}
@@ -271,7 +275,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
 
         // Alla fine, riporto il buffer in modalità scrittura
         msgBuffer.flip();
-        System.out.println(serverResponse);
+        System.out.println("Server@WORTH < "+serverResponse);
         return serverResponse.toString();
     }
 
@@ -283,6 +287,6 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
     @Override
     public void notifyEvent(List PublicUsers) throws RemoteException {
         ClientMain.PublicUsers = PublicUsers;
-        System.out.println(ClientMain.PublicUsers);
+        //System.out.println(ClientMain.PublicUsers);
     }
 }
