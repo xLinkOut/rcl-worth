@@ -21,4 +21,8 @@ public class User {
     public Status getStatus() { return status; }
 
     public void setStatus(Status status) { this.status = status; }
+
+    public boolean auth(String password){
+        return this.password.equals(password);
+    }
 }
