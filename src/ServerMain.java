@@ -1,5 +1,7 @@
 // @author Luca Cirillo (545480)
 
+import WorthExceptions.AuthFailException;
+import WorthExceptions.UserNotFoundException;
 import WorthExceptions.UsernameAlreadyTakenException;
 import com.google.gson.Gson;
 
@@ -19,6 +21,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+@SuppressWarnings("ConstantConditions")
 public class ServerMain extends RemoteObject implements Server, ServerRMI{
 
     // * TCP
@@ -133,8 +136,18 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
 
                         if (cmd.length > 0) {
                             switch (cmd[0]) { // Seleziono il comando
+
                                 case "login":
+                                    try {
+                                        login(cmd[1], cmd[2]);
+                                        key.attach("ok");
+                                    } catch (UserNotFoundException e) {
+                                        key.attach("ko:404:User not found");
+                                    } catch (AuthFailException e) {
+                                        key.attach("ko:401:Wrong password");
+                                    }
                                     break;
+
                                 case "logout":
                                     break;
                             }
@@ -181,13 +194,28 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
         users.add(new User(username, password));
     }
 
+    private void login(String username, String password)
+            throws IllegalArgumentException, UserNotFoundException, AuthFailException {
+        // Controllo validità dei parametri
+        if(username.isEmpty()) throw new IllegalArgumentException("username");
+        if(password.isEmpty()) throw new IllegalArgumentException("password");
 
-    // * UTILS
-    // Controlla l'esistenza di un utente nel sistema
-    private boolean userExists(String username){
-        return users.stream().anyMatch(user -> user.getUsername().equals(username));
+        // Controllo l'esistenza dell'utente
+        if(!userExists(username)) throw new UserNotFoundException(username);
+
+        // Controllo se la password è corretta
+        if(!getUser(username).auth(password)) throw new AuthFailException(password);
+
+        // Aggiorno il suo stato su Online
+        getUser(username).setStatus(User.Status.ONLINE);
+
+        // Aggiorno tutti gli altri clients con una callback
+        try { sendCallbacks(); }
+        catch (RemoteException e) { e.printStackTrace(); }
     }
 
+
+    // * UTILS
     // Legge la richiesta inviata dal client
     private String readRequest(SocketChannel client) throws IOException {
         // Alloco un buffer di <DIM_BUFFER>
@@ -216,6 +244,18 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
 
         if(DEBUG) System.out.println("Server@WORTH > "+clientRequest);
         return clientRequest.toString();
+    }
+
+    // Controlla l'esistenza di un utente nel sistema
+    private boolean userExists(String username){
+        return users.stream().anyMatch(user -> user.getUsername().equals(username));
+    }
+
+    // Recupera l'utente <username>
+    private User getUser(String username){
+        for(User user: users)
+            if(user.getUsername().equals(username)) return user;
+        return null;
     }
 
     // * CALLBACKS

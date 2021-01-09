@@ -1,6 +1,7 @@
 // @author Luca Cirillo (545480)
 
 import WorthExceptions.UsernameAlreadyTakenException;
+import com.google.gson.Gson;
 
 import java.io.IOException;
 import java.net.ConnectException;
@@ -31,6 +32,8 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
     private static boolean logged = false;
     private static String username = "Guest";
     private static List PublicUsers;
+    private static final Gson gson = new Gson();
+
 
     // * MESSAGES
     private static final String msgStartup =
@@ -114,12 +117,8 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
                                     server.register(cmd[1], cmd[2]);
                                     // Registrazione avvenuta con successo
                                     System.out.println("Signup was successful!\nI try to automatically login to WORTH, wait..");
-
                                     // Provo ad effettuare il login automaticamente
-                                    if(login(cmd[1], cmd[2]))
-                                        System.out.println("Great! Now your are logged as "+cmd[1]+"!");
-                                    else
-                                        System.out.println("Something went wrong during automatically login, try to manually login");
+                                    login(cmd[1], cmd[2]);
 
                                 } catch (IllegalArgumentException iae){
                                     // Se almeno uno dei due parametri risulta invalido
@@ -137,15 +136,10 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
                                     System.out.println("Username is already taken! Try with " + cmd[1] + "123 or X" + cmd[1] + "X");
                                 }
                                 break;
+
                             case "login":
                                 try {
-                                    if (login(cmd[1], cmd[2])) {
-                                        System.out.println("Great! Now your are logged as " + cmd[1] + "!");
-                                        continue;
-                                    } else {
-                                        System.out.println("Are you sure that an account with this name exists?\n" +
-                                                "If you need one, use register command");
-                                    }
+                                    login(cmd[1], cmd[2]);
                                 } catch (IllegalArgumentException iae){
                                     System.out.println("Insert a valid " + iae.getMessage() +
                                             "Usage: register username password");
@@ -217,20 +211,28 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
         } catch (IOException e) { e.printStackTrace(); }
     }
 
-    private boolean login(String username, String password){
+    private void login(String username, String password){
         try {
             // Invio al server il comando di login con le credenziali
             sendRequest("login "+username+" "+password);
             // Se tutto ok, aggiorno i parametri, registro il client
             // per le callbacks e ritorno true
-            if(readResponse().equals("ok")){
+            String[] response = readResponse().split(":");
+            if(response[0].equals("ok")){
+                // Registro l'esito positivo del login
                 logged = true;
                 ClientMain.username = username;
                 // Registro il client per la ricezione delle callback
                 server.registerCallback(notifyStub);
-                return true;
-            }else{ return false; }
-        } catch (IOException e) {e.printStackTrace(); return false;}
+                System.out.println("Great! Now your are logged as " + username + "!");
+            }else {
+                if(response[1].equals("401"))
+                    System.out.println("The password you entered is incorrect, please try again");
+                else if(response[1].equals("404"))
+                    System.out.println("Are you sure that an account with this name exists?\n" +
+                            "If you need one, use register command");
+            }
+        } catch (IOException e) {e.printStackTrace();}
     }
 
     private boolean logout(){
@@ -249,6 +251,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
         } catch (IOException e) { e.printStackTrace(); return false; }
     }
 
+    // * UTILS
     private void sendRequest(String request) throws IOException {
         socketChannel.write(ByteBuffer.wrap((request).getBytes(StandardCharsets.UTF_8)));
     }
@@ -278,13 +281,8 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
             // Finché ci sono bytes da leggere, continuo
         } while (bytesRead >= 1024);
 
-        System.out.println("Server@WORTH < "+serverResponse);
+        System.out.println("Server@WORTH < "+serverResponse.toString());
         return serverResponse.toString();
-    }
-
-    public static void main(String[] args){
-        ClientMain client = new ClientMain();
-        client.run();
     }
 
     @Override
@@ -292,4 +290,10 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
         ClientMain.PublicUsers = PublicUsers;
         //System.out.println(ClientMain.PublicUsers);
     }
+
+    public static void main(String[] args){
+        ClientMain client = new ClientMain();
+        client.run();
+    }
+
 }
