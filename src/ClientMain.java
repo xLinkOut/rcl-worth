@@ -31,7 +31,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
     // * CLIENT
     private static boolean logged = false;
     private static String username = "Guest";
-    private static List PublicUsers;
+    private static List publicUsers;
     private static final Gson gson = new Gson();
 
 
@@ -289,9 +289,9 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
     }
 
     @Override
-    public void notifyEvent(List PublicUsers) throws RemoteException {
-        ClientMain.PublicUsers = PublicUsers;
-        //System.out.println(ClientMain.PublicUsers);
+    public void notifyEvent(List publicUsers) throws RemoteException {
+        ClientMain.publicUsers = publicUsers;
+        //System.out.println(ClientMain.publicUsers);
     }
 
     public static void main(String[] args){

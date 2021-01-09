@@ -32,7 +32,7 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
     // * SERVER
     private final boolean DEBUG = true;
     private final List<User> users;
-    private final List<PublicUser> PublicUsers;
+    private final List<PublicUser> publicUsers;
     private final List<NotifyEventInterface> clients;
     private static final Gson gson = new Gson();
 
@@ -43,7 +43,7 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
 
         // Persistenza
         this.users = new ArrayList<>();
-        this.PublicUsers = new ArrayList<>();
+        this.publicUsers = new ArrayList<>();
     }
 
     private void live() {
@@ -199,6 +199,7 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
 
         // Registro utente nel database
         users.add(new User(username, password));
+        publicUsers.add(new PublicUser(username));
     }
 
     // Permette ad un utente di utilizzare il sistema
@@ -216,6 +217,7 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
 
         // Aggiorno il suo stato su Online
         getUser(username).setStatus(User.Status.ONLINE);
+        getPublicUser(username).setStatus(User.Status.ONLINE);
 
         // Aggiorno tutti gli altri clients con una callback
         try { sendCallbacks(); }
@@ -235,6 +237,7 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
         // sicuramente l'utente ha fatto un login precedentemente, per come il client è implementato
         // Aggiorno il suo stato su Offline
         getUser(username).setStatus(User.Status.OFFLINE);
+        getPublicUser(username).setStatus(User.Status.OFFLINE);
 
         // Aggiorno tutti gli altri clients con una callback
         try { sendCallbacks(); }
@@ -284,30 +287,30 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
         return null;
     }
 
+    private PublicUser getPublicUser(String username){
+        for(PublicUser user: publicUsers)
+            if(user.getUsername().equals(username)) return user;
+        return null;
+    }
+
     // * CALLBACKS
     @Override
     public synchronized void registerCallback(NotifyEventInterface clientInterface)
             throws RemoteException {
         if(!clients.contains(clientInterface)) {
             clients.add(clientInterface);
-            System.out.println("New client registered for callbacks");
-            synchronized (PublicUsers){
-                clientInterface.notifyEvent(PublicUsers);
-            }
+            clientInterface.notifyEvent(publicUsers);
         }
     }
 
     @Override
     public synchronized void unregisterCallback(NotifyEventInterface clientInterface) throws RemoteException {
-        if(clients.remove(clientInterface)) System.out.println("Client unregistered");
-        else System.out.println("Unable to unregister client");
+        clients.remove(clientInterface);
     }
 
     public synchronized void sendCallbacks() throws RemoteException{
-        //System.out.println("Starting callbacks...");
         for (NotifyEventInterface client : clients)
-            client.notifyEvent(PublicUsers);
-        //System.out.println("Callbacks complete");
+            client.notifyEvent(publicUsers);
     }
 
     // * MAIN
