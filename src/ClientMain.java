@@ -105,60 +105,99 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
 
             // * Shell
             System.out.println(msgHelpGuest);
+
             while(true){
                 // * Registrazione e/o Login
                 while(!logged){
                     System.out.print(username+"@WORTH > ");
                     cmd = scanner.nextLine().split(" ");
+                    try {
+                        if (cmd.length > 0) {
+                            switch (cmd[0]) {
+                                case "register":
+                                    try {
+                                        server.register(cmd[1], cmd[2]);
+                                        // Registrazione avvenuta con successo
+                                        System.out.println("Signup was successful!\nI try to automatically login to WORTH, wait..");
+                                        // Provo ad effettuare il login automaticamente
+                                        login(cmd[1], cmd[2]);
+
+                                    } catch (IllegalArgumentException iae) {
+                                        // Se almeno uno dei due parametri risulta invalido
+                                        System.out.println("Insert a valid " + iae.getMessage() +
+                                                "Usage: register username password");
+
+                                    } catch (ArrayIndexOutOfBoundsException e) {
+                                        // Se almeno uno dei due parametri tra username e password non è presente
+                                        // oppure risulta vuoto, informo utente e stampo help del comando register
+                                        System.out.println("Oops! It looks like you haven't entered username or password!\n" +
+                                                "Usage: register username password");
+
+                                    } catch (UsernameAlreadyTakenException uate) {
+                                        // L'username utilizzato è già stato preso da un altro utente
+                                        System.out.println("Username is already taken! Try with " + cmd[1] + "123 or X" + cmd[1] + "X");
+                                    }
+                                    break;
+
+                                case "login":
+                                    try {
+                                        login(cmd[1], cmd[2]);
+                                    } catch (IllegalArgumentException iae) {
+                                        System.out.println("Insert a valid " + iae.getMessage() +
+                                                "Usage: register username password");
+                                    } catch (ArrayIndexOutOfBoundsException e) {
+                                        // Se almeno uno dei due parametri tra username e password
+                                        // non è presente o risulta vuoto, informo utente
+                                        // e stampo help del comando register
+                                        System.out.println("Oops! It looks like you haven't entered username or password!\n" +
+                                                "Usage: login username password");
+                                    }
+                                    break;
+                                case "logout":
+                                    System.out.println("Mmh... what about some login instead?\n" +
+                                            "Usage: login username password");
+                                    break;
+                                case "help":
+                                    System.out.println(msgHelpGuest);
+                                    break;
+                                case "quit":
+                                    System.out.println("Hope to see you soon," + username + "!");
+                                    System.exit(0);
+                                    break;
+                                default:
+                                    System.out.println("Command not recognized or not available as a guest, please login.");
+                            }
+                        } else { System.out.println(msgHelpGuest); }
+                    }catch (IOException ioe){ioe.printStackTrace();}
+                }
+
+                // * Tutte le altre funzioni
+                System.out.print(username+"@WORTH > ");
+                cmd = scanner.nextLine().split(" ");
+                try{
                     if(cmd.length > 0){
                         switch (cmd[0]){
-                            case "register":
-                                try {
-                                    server.register(cmd[1], cmd[2]);
-                                    // Registrazione avvenuta con successo
-                                    System.out.println("Signup was successful!\nI try to automatically login to WORTH, wait..");
-                                    // Provo ad effettuare il login automaticamente
-                                    login(cmd[1], cmd[2]);
-
-                                } catch (IllegalArgumentException iae){
-                                    // Se almeno uno dei due parametri risulta invalido
-                                    System.out.println("Insert a valid " + iae.getMessage() +
-                                            "Usage: register username password");
-
-                                } catch (ArrayIndexOutOfBoundsException e){
-                                    // Se almeno uno dei due parametri tra username e password non è presente
-                                    // oppure risulta vuoto, informo utente e stampo help del comando register
-                                    System.out.println("Oops! It looks like you haven't entered username or password!\n" +
-                                            "Usage: register username password");
-
-                                } catch (UsernameAlreadyTakenException uate) {
-                                    // L'username utilizzato è già stato preso da un altro utente
-                                    System.out.println("Username is already taken! Try with " + cmd[1] + "123 or X" + cmd[1] + "X");
-                                }
+                            case "register": // RMI
+                                System.out.println("You are already logged in! Logout first, if you want to create another WORTH account");
+                                break;
+                            case "login": // TCP
+                                System.out.println("You are already logged in! Logout first, if you want to login with another WORTH account");
+                                break;
+                            case "logout": // TCP
+                                logout();
                                 break;
 
-                            case "login":
-                                try {
-                                    login(cmd[1], cmd[2]);
-                                } catch (IllegalArgumentException iae){
-                                    System.out.println("Insert a valid " + iae.getMessage() +
-                                            "Usage: register username password");
-                                } catch (ArrayIndexOutOfBoundsException e){
-                                    // Se almeno uno dei due parametri tra username e password
-                                    // non è presente o risulta vuoto, informo utente
-                                    // e stampo help del comando register
-                                    System.out.println("Oops! It looks like you haven't entered username or password!\n" +
-                                            "Usage: login username password");
-                                }
+                            case "listUsers": // LOCAL, UPDATE BY RMI CALLBACK
                                 break;
-                            case "logout":
-                                System.out.println("Mmh... what about some login instead?\n" +
-                                        "Usage: login username password");
+                            case "listOnlineusers": // LOCAL, UPDATE BY RMI CALLBACK
                                 break;
+
+
                             case "help":
-                                System.out.println(msgHelpGuest);
+                                System.out.println(msgHelp);
                                 break;
                             case "quit":
+                                if(logged) logout();
                                 System.out.println("Hope to see you soon,"+username+"!");
                                 System.exit(0);
                                 break;
@@ -166,44 +205,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
                                 System.out.println("Command not recognized or not available as a guest, please login.");
                         }
                     }else{ System.out.println(msgHelpGuest); }
-                }
-
-                // * Tutte le altre funzioni
-                System.out.print(username+"@WORTH > ");
-                cmd = scanner.nextLine().split(" ");
-                if(cmd.length > 0){
-                    switch (cmd[0]){
-                        case "register": // RMI
-                            System.out.println("You are already logged in! Logout first, if you want to create another WORTH account");
-                            break;
-                        case "login": // TCP
-                            System.out.println("You are already logged in! Logout first, if you want to login with another WORTH account");
-                            break;
-                        case "logout": // TCP
-                            if(logout()) System.out.println("You have been logged out successfully");
-                            else System.out.println("Uhm, something went wrong. Try again please!");
-                            break;
-
-                        case "listUsers": // LOCAL, UPDATE BY RMI CALLBACK
-                            break;
-                        case "listOnlineusers": // LOCAL, UPDATE BY RMI CALLBACK
-                            break;
-
-
-                        case "help":
-                            System.out.println(msgHelp);
-                            break;
-                        case "quit":
-                            System.out.println("Hope to see you soon,"+username+"!");
-                            // Fare logout?
-                            System.exit(0);
-                            break;
-                        default:
-                            System.out.println("Command not recognized or not available as a guest, please login.");
-                    }
-                }else{
-                    System.out.println(msgHelpGuest);
-                }
+                } catch (IOException ioe){ioe.printStackTrace();}
             }
 
             // unregisterCallback
@@ -211,44 +213,45 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
         } catch (IOException e) { e.printStackTrace(); }
     }
 
-    private void login(String username, String password){
-        try {
-            // Invio al server il comando di login con le credenziali
-            sendRequest("login "+username+" "+password);
-            // Se tutto ok, aggiorno i parametri, registro il client
-            // per le callbacks e ritorno true
-            String[] response = readResponse().split(":");
-            if(response[0].equals("ok")){
-                // Registro l'esito positivo del login
-                logged = true;
-                ClientMain.username = username;
-                // Registro il client per la ricezione delle callback
-                server.registerCallback(notifyStub);
-                System.out.println("Great! Now your are logged as " + username + "!");
-            }else {
-                if(response[1].equals("401"))
-                    System.out.println("The password you entered is incorrect, please try again");
-                else if(response[1].equals("404"))
-                    System.out.println("Are you sure that an account with this name exists?\n" +
-                            "If you need one, use register command");
-            }
-        } catch (IOException e) {e.printStackTrace();}
+    private void login(String username, String password) throws IOException {
+        // Invio al server il comando di login con le credenziali
+        sendRequest("login "+username+" "+password);
+        // Se tutto ok, aggiorno i parametri, registro il client
+        // per le callbacks e ritorno true
+        String[] response = readResponse().split(":");
+        if(response[0].equals("ok")){
+            // Registro l'esito positivo del login
+            logged = true;
+            ClientMain.username = username;
+            // Registro il client per la ricezione delle callback
+            server.registerCallback(notifyStub);
+            System.out.println("Great! Now your are logged as " + username + "!");
+        }else {
+            if(response[1].equals("401"))
+                System.out.println("The password you entered is incorrect, please try again");
+            else if(response[1].equals("404"))
+                System.out.println("Are you sure that an account with this name exists?\n" +
+                        "If you need one, use register command");
+        }
     }
 
-    private boolean logout(){
-        try{
-            // Invio al server il comando di logout
-            sendRequest("logout "+username);
+    private void logout() throws IOException {
+        // Invio al server il comando di logout
+        sendRequest("logout "+username);
+        // Se tutto ok, ritorno true
+        String[] response = readResponse().split(":");
+        if(response[0].equals("ok")){
+            // Registro l'esito positivo del logout
+            logged = false;
+            username = "Guest";
             // Disiscrivo il client dalla ricezione delle callbacks
             server.unregisterCallback(notifyStub);
-            // Se tutto ok, ritorno true
-            if(readResponse().equals("ok")){
-                logged = false;
-                username = "Guest";
-                PublicUsers.clear();
-                return true;
-            }else{ return false; }
-        } catch (IOException e) { e.printStackTrace(); return false; }
+            System.out.println("You have been logged out successfully");
+        }else {
+            if(response[1].equals("404"))
+                System.out.println("Are you sure that an account with this name exists?\n" +
+                        "If you need one, use register command");
+        }
     }
 
     // * UTILS

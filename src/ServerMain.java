@@ -149,6 +149,13 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
                                     break;
 
                                 case "logout":
+                                    try{
+                                        logout(cmd[1]);
+                                        key.attach("ok");
+                                    } catch (UserNotFoundException e) {
+                                        // In teoria, non può succedere per via dell'implementazione del client
+                                        key.attach("ko:404:User not found");
+                                    }
                                     break;
                             }
                         }
@@ -194,6 +201,7 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
         users.add(new User(username, password));
     }
 
+    // Permette ad un utente di utilizzare il sistema
     private void login(String username, String password)
             throws IllegalArgumentException, UserNotFoundException, AuthFailException {
         // Controllo validità dei parametri
@@ -214,6 +222,24 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
         catch (RemoteException e) { e.printStackTrace(); }
     }
 
+    // Utente abbandona correttamente il sistema
+    private void logout(String username)
+            throws IllegalArgumentException, UserNotFoundException {
+        // Controllo validità dei parametri
+        if(username.isEmpty()) throw new IllegalArgumentException("username");
+
+        // Controllo l'esistenza dell'utente
+        if(!userExists(username)) throw new UserNotFoundException(username);
+
+        // Limito l'overhead non facendo controlli in quanto, se arriva un comando di logout
+        // sicuramente l'utente ha fatto un login precedentemente, per come il client è implementato
+        // Aggiorno il suo stato su Offline
+        getUser(username).setStatus(User.Status.OFFLINE);
+
+        // Aggiorno tutti gli altri clients con una callback
+        try { sendCallbacks(); }
+        catch (RemoteException e) {e.printStackTrace();}
+    }
 
     // * UTILS
     // Legge la richiesta inviata dal client
