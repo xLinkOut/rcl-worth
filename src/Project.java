@@ -7,10 +7,10 @@ public class Project {
     private final List<User> members;
 
     // Cards // temp string substiture cards
-    private final List<String> todo;
-    private final List<String> inProgress;
-    private final List<String> toBeRevised;
-    private final List<String> done;
+    private final List<Card> todo;
+    private final List<Card> inProgress;
+    private final List<Card> toBeRevised;
+    private final List<Card> done;
 
 
     public Project(String name){
