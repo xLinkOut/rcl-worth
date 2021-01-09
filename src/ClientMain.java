@@ -1,5 +1,7 @@
 // @author Luca Cirillo (545480)
 
+import WorthExceptions.UsernameAlreadyTakenException;
+
 import java.io.IOException;
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
@@ -109,27 +111,30 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
                         switch (cmd[0]){
                             case "register":
                                 try {
-                                    if (server.register(cmd[1], cmd[2])) {
-                                        // Registrazione avvenuta con successo
-                                        System.out.println("Signup was successful!\n" +
-                                                "I try to automatically login to WORTH, wait..");
-                                        if(login(cmd[1], cmd[2])){
-                                            System.out.println("Great! Now your are logged as "+cmd[1]+"!");
-                                            continue;
-                                        }else{
-                                            System.out.println("Something went wrong during automatically login, try to manually login");
-                                        }
-                                    } else {
-                                        System.out.println("Username is already taken! Try with " + cmd[1] + "123 or X" + cmd[1] + "X");
-                                    }
+                                    server.register(cmd[1], cmd[2]);
+                                    // Registrazione avvenuta con successo
+                                    System.out.println("Signup was successful!\nI try to automatically login to WORTH, wait..");
+
+                                    // Provo ad effettuare il login automaticamente
+                                    if(login(cmd[1], cmd[2]))
+                                        System.out.println("Great! Now your are logged as "+cmd[1]+"!");
+                                    else
+                                        System.out.println("Something went wrong during automatically login, try to manually login");
+
                                 } catch (IllegalArgumentException iae){
+                                    // Se almeno uno dei due parametri risulta invalido
                                     System.out.println("Insert a valid " + iae.getMessage() +
                                             "Usage: register username password");
+
                                 } catch (ArrayIndexOutOfBoundsException e){
                                     // Se almeno uno dei due parametri tra username e password non è presente
                                     // oppure risulta vuoto, informo utente e stampo help del comando register
                                     System.out.println("Oops! It looks like you haven't entered username or password!\n" +
                                             "Usage: register username password");
+
+                                } catch (UsernameAlreadyTakenException uate) {
+                                    // L'username utilizzato è già stato preso da un altro utente
+                                    System.out.println("Username is already taken! Try with " + cmd[1] + "123 or X" + cmd[1] + "X");
                                 }
                                 break;
                             case "login":
@@ -273,8 +278,6 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
             // Finché ci sono bytes da leggere, continuo
         } while (bytesRead >= 1024);
 
-        // Alla fine, riporto il buffer in modalità scrittura
-        msgBuffer.flip();
         System.out.println("Server@WORTH < "+serverResponse);
         return serverResponse.toString();
     }

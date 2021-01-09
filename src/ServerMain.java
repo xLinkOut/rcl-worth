@@ -1,5 +1,8 @@
 // @author Luca Cirillo (545480)
 
+import WorthExceptions.UsernameAlreadyTakenException;
+import com.google.gson.Gson;
+
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.nio.ByteBuffer;
@@ -15,7 +18,6 @@ import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Optional;
 
 public class ServerMain extends RemoteObject implements Server, ServerRMI{
 
@@ -25,11 +27,11 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
     private static final int PORT_RMI = 9876;
     private static final String NAME_RMI = "WORTH-SERVER";
     // * SERVER
-    // TODO: boolean DEBUG
-    //private static final Gson gson = new Gson();
-    private final List<User> Users;
+    private final boolean DEBUG = true;
+    private final List<User> users;
     private final List<PublicUser> PublicUsers;
     private final List<NotifyEventInterface> clients;
+    private static final Gson gson = new Gson();
 
     public ServerMain(){
         // Callback
@@ -37,7 +39,7 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
         clients = new ArrayList<>();
 
         // Persistenza
-        this.Users = new ArrayList<>();
+        this.users = new ArrayList<>();
         this.PublicUsers = new ArrayList<>();
     }
 
@@ -106,7 +108,6 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
                 // La rimuovo esplicitamente dall'iteratore
                 iterator.remove();
 
-                // TODO: staccare client disconnesso
                 // Se la key considerata identifica:
                 try {
 
@@ -115,7 +116,7 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
                         ServerSocketChannel socket = (ServerSocketChannel) key.channel();
                         // Accetto la connessione
                         SocketChannel client = socket.accept();
-                        System.out.println("<" + client.getRemoteAddress() + ">: TCP Accepted");
+                        if(DEBUG) System.out.println("<" + client.getRemoteAddress() + ">: TCP Accepted");
                         client.configureBlocking(false);
                         // Registro il nuovo client sul Selector
                         client.register(selector, SelectionKey.OP_READ, null);
@@ -124,22 +125,21 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
                     // Un canale pronto ad un'operazione di lettura
                     else if (key.isReadable()) {
                         SocketChannel client = (SocketChannel) key.channel();
-                        // Leggo il comando inviato dal client
-                        ByteBuffer buffer = ByteBuffer.allocate(1024);
-                        client.read(buffer);
-                        // Lo trasformo in un array, con una split sullo spazio vuoto
+                        // Recupero la richiesta del client
+                        String  request = readRequest(client);
+                        // Divido il comando e gli eventuali argomenti
                         // (Con la .trim() mi assicuro di eliminare spazi vuoti "inutili"
-                        String[] cmd = new String(buffer.array()).trim().split(" ");
+                        String[] cmd = request.trim().split(" ");
+
                         if (cmd.length > 0) {
-                            switch (cmd[0]) {
+                            switch (cmd[0]) { // Seleziono il comando
                                 case "login":
-                                    if (login(cmd[1], cmd[2])) key.attach("ok");
                                     break;
                                 case "logout":
-                                    if(logout(cmd[1])) key.attach("ok");
                                     break;
                             }
                         }
+
                         key.interestOps(SelectionKey.OP_WRITE);
                     }
 
@@ -148,10 +148,9 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
                         SocketChannel client = (SocketChannel) key.channel();
                         String msg = (String) key.attachment();
                         if (msg == null) {
-                            // Client disconnesso
+                            // Client disconnesso ?
                             key.cancel();
                             key.channel().close();
-                            // TODO: Status offline
                         } else {
                             // Invio di una risposta
                             client.write(ByteBuffer.wrap(msg.getBytes(StandardCharsets.UTF_8)));
@@ -165,79 +164,58 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
     }
 
     // * ENDPOINTS
-    public boolean register(String username, String password)
-        throws RemoteException, IllegalArgumentException{
+
+    // Registra un nuovo utente nel sistema
+    public void register(String username, String password)
+            throws RemoteException, IllegalArgumentException, UsernameAlreadyTakenException {
+
         // Controllo validità dei parametri
         if(username.isEmpty()) throw new IllegalArgumentException("username");
         if(password.isEmpty()) throw new IllegalArgumentException("password");
+        if(DEBUG) System.out.println("Server@WORTH > register "+username+" "+password);
 
         // Controllo unicità username
-        if(userExists(username)) return false;
+        if(userExists(username)) throw new UsernameAlreadyTakenException("username");
 
         // Registro utente nel database
-        Users.add(new User(username, password));
-        // TODO: Valutare unmodifieble list
-        PublicUsers.add(new PublicUser(username));
-        //String jsonNewUser = gson.toJson(newUser);
-        sendCallbacks();
-        System.out.println("register("+username+","+password+")");
-        return true;
+        users.add(new User(username, password));
     }
 
-    @SuppressWarnings("OptionalGetWithoutIsPresent")
-    private boolean login(String username, String password)
-        throws IllegalArgumentException{
-        // Controllo validità dei parametri
-        if(username.isEmpty()) throw new IllegalArgumentException("username");
-        if(password.isEmpty()) throw new IllegalArgumentException("password");
-
-        // Controllo l'esistenza dell'utente
-        if(!userExists(username)) return false;
-
-        // Controllo se la password è corretta
-        if(!getUser(username).get().getPassword().equals(password)) return false;
-
-        // Aggiorno il suo stato su Online
-        getUser(username).get().setStatus(User.Status.ONLINE);
-
-        // Aggiorno tutti gli altri clients con una callback
-        try { sendCallbacks(); }
-        catch (RemoteException e) {e.printStackTrace();}
-
-        return true;
-    }
-
-    private boolean logout(String username)
-        throws IllegalArgumentException{
-        // Controllo validità dei parametri
-        if(username.isEmpty()) throw new IllegalArgumentException("username");
-
-        // Controllo l'esistenza dell'utente
-        // TODO Eccezione user not found?
-        if(!userExists(username)) return false;
-
-        // Limito l'overhead non facendo controlli
-        // in quanto, se arriva un comando di logout
-        // sicuramente l'utente ha fatto un login
-        // precedentemente, per come il client è implementato
-        // (Sono sicuro che utente esista)
-        //noinspection OptionalGetWithoutIsPresent
-        getUser(username).get().setStatus(User.Status.OFFLINE);
-
-        // Aggiorno tutti gli altri clients con una callback
-        try { sendCallbacks(); }
-        catch (RemoteException e) {e.printStackTrace();}
-
-        return true;
-    }
 
     // * UTILS
+    // Controlla l'esistenza di un utente nel sistema
     private boolean userExists(String username){
-        return Users.stream().anyMatch(user -> user.getUsername().equals(username));
+        return users.stream().anyMatch(user -> user.getUsername().equals(username));
     }
 
-    private Optional<User> getUser(String username){
-        return Users.stream().filter(user -> user.getUsername().equals(username)).findFirst();
+    // Legge la richiesta inviata dal client
+    private String readRequest(SocketChannel client) throws IOException {
+        // Alloco un buffer di <DIM_BUFFER>
+        ByteBuffer msgBuffer = ByteBuffer.allocate(1024);
+        // Stringa corrispondente alla risposta del server
+        StringBuilder clientRequest = new StringBuilder();
+        // Quantità di bytes letti ad ogni chiamata della .read()
+        int bytesRead;
+
+        do {
+            // Svuoto il buffer
+            msgBuffer.clear();
+            // Leggo dal canale direttamente nel buffer
+            // e mi salvo la quantità di bytes letti
+            bytesRead = client.read(msgBuffer);
+            // Passo il buffer dalla modalità lettura a scrittura
+            msgBuffer.flip();
+            // Costruisco la risposta del server appendendoci
+            // la stringa letta (finora) dal canale
+            clientRequest.append(StandardCharsets.UTF_8.decode(msgBuffer).toString());
+            // Riporto il buffer in modalità lettura
+            msgBuffer.flip();
+
+            // Finché ci sono bytes da leggere, continuo
+        } while (bytesRead >= 1024);
+
+        if(DEBUG) System.out.println("Server@WORTH > "+clientRequest);
+        return clientRequest.toString();
     }
 
     // * CALLBACKS
