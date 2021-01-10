@@ -173,6 +173,7 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
                                 case "addMember":
                                     try{
                                         addMember(cmd[1],cmd[2],cmd[3]);
+                                        key.attach("ok");
                                     } catch (ProjectNotFoundException e) {
                                         key.attach("ko:404:Project not found");
                                     } catch (UserNotFoundException e) {
@@ -180,7 +181,15 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
                                     }
                                     break;
 
-                                
+                                case "showMembers":
+                                    try{
+                                        key.attach("ok:"+showMembers(cmd[1], cmd[2]));
+                                    } catch (ForbiddenException e) {
+                                        key.attach("ko:403:You're not member of this project");
+                                    } catch (ProjectNotFoundException e) {
+                                        key.attach("ko:404:Project not found");
+                                    }
+                                    break;
                             }
                         }
 
@@ -295,9 +304,27 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
         // Controllo che memberUsername sia effettivamente un utente del sistema
         if(!userExists(memberUsername)) throw new UserNotFoundException(memberUsername);
 
+        // TODO: Controllo che memberUsername non faccia ancora parte di projectName
+
         // Aggiungo memberUsername come nuovo membro del progetto projectName
         projects.get(projectName).addMember(getUser(memberUsername));
 
+    }
+
+    private String showMembers(String username, String projectName)
+            throws IllegalArgumentException, ProjectNotFoundException, ForbiddenException {
+        // Controllo validità dei parametri
+        if(username.isEmpty()) throw new IllegalArgumentException("username");
+        if(projectName.isEmpty()) throw new IllegalArgumentException("projectName");
+
+        // Controllo se esiste un progetto con il nome indicato
+        if(!projects.containsKey(projectName)) throw new ProjectNotFoundException(projectName);
+
+        Project project = projects.get(projectName);
+        // Se l'utente è un membro del progetto, può consultare la lista membri
+        if(project.getMembers().contains(getUser(username)))
+            return project.getMembers().toString();
+        else throw new ForbiddenException();
     }
 
     // * UTILS

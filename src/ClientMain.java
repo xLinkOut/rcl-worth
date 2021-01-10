@@ -206,6 +206,10 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
                                 }
                                 break;
 
+                            case "showMembers":
+                                showMembers(cmd[1]);
+                                break;
+
                             case "help":
                                 System.out.println(msgHelp);
                                 break;
@@ -273,7 +277,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
         // Se tutto ok
         String[] response = readResponse().split(":");
         if(response[0].equals("ok")){
-            System.out.println("Project "+projectName+" created!\n+" +
+            System.out.println("Project "+projectName+" created!\n" +
                     "Currently you're the only member. Try use addMember to invite some coworkers");
         }else {
             if(response[1].equals("409"))
@@ -282,7 +286,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
     }
 
     private void addMember(String projectName, String memberUsername) throws IOException {
-        // Invio al server il comando per creare un nuovo progetto
+        // Invio al server il comando per aggiungere un nuovo utente al progetto
         sendRequest("addMember "+username+" "+projectName+" "+memberUsername);
         String[] response = readResponse().split(":");
         if(response[0].equals("ok")){
@@ -294,6 +298,20 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
                 else if(response[2].contains("User"))
                     System.out.println("Can't found an account named "+memberUsername+"! Maybe is a typo?");
             }
+        }
+    }
+
+    private void showMembers(String projectName) throws IOException {
+        sendRequest("showMembers "+username+" "+projectName);
+        String[] response = readResponse().split(":");
+        if(response[0].equals("ok")){
+            System.out.println("These are the members of the project "+projectName+"\n");
+            System.out.println(response[1]);
+        }else {
+            if(response[1].equals("403"))
+                System.out.println(response[2]);
+            else if(response[1].equals("404"))
+                System.out.println("Can't found "+projectName+", are you sure that exists? Try createProject to create a project");
         }
     }
 
