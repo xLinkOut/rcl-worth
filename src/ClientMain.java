@@ -306,12 +306,14 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
         String[] response = readResponse().split(":");
         if(response[0].equals("ok")){
             System.out.println("These are the members of the project "+projectName+"\n");
-            System.out.println(response[1]);
+            // [User@48140564, User@58ceff1]
         }else {
             if(response[1].equals("403"))
                 System.out.println(response[2]);
             else if(response[1].equals("404"))
                 System.out.println("Can't found "+projectName+", are you sure that exists? Try createProject to create a project");
+            else if(response[1].equals("409"))
+                System.out.println(response[2]);
         }
     }
 

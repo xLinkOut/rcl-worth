@@ -178,6 +178,8 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
                                         key.attach("ko:404:Project not found");
                                     } catch (UserNotFoundException e) {
                                         key.attach("ko:404:User not found");
+                                    } catch (AlreadyMemberException e) {
+                                        key.attach("ko:409:Already member");
                                     }
                                     break;
 
@@ -292,7 +294,7 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
     }
 
     private void addMember(String username, String projectName, String memberUsername)
-            throws IllegalArgumentException, ProjectNotFoundException, UserNotFoundException {
+            throws IllegalArgumentException, ProjectNotFoundException, UserNotFoundException, AlreadyMemberException {
         // Controllo validità dei parametri
         if(username.isEmpty()) throw new IllegalArgumentException("username");
         if(projectName.isEmpty()) throw new IllegalArgumentException("projectName");
@@ -304,10 +306,14 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
         // Controllo che memberUsername sia effettivamente un utente del sistema
         if(!userExists(memberUsername)) throw new UserNotFoundException(memberUsername);
 
-        // TODO: Controllo che memberUsername non faccia ancora parte di projectName
+        Project project = projects.get(projectName);
+
+        // Controllo che memberUsername non faccia ancora parte di projectName
+        if(project.getMembers().contains(getUser(memberUsername)))
+            throw new AlreadyMemberException(memberUsername);
 
         // Aggiungo memberUsername come nuovo membro del progetto projectName
-        projects.get(projectName).addMember(getUser(memberUsername));
+        project.addMember(getUser(memberUsername));
 
     }
 
