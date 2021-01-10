@@ -1,9 +1,6 @@
 // @author Luca Cirillo (545480)
 
-import WorthExceptions.AuthFailException;
-import WorthExceptions.ProjectNameAlreadyInUse;
-import WorthExceptions.UserNotFoundException;
-import WorthExceptions.UsernameAlreadyTakenException;
+import WorthExceptions.*;
 import com.google.gson.Gson;
 
 import java.io.IOException;
@@ -11,6 +8,7 @@ import java.net.ServerSocket;
 import java.nio.ByteBuffer;
 import java.nio.channels.*;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.ProviderMismatchException;
 import java.rmi.RemoteException;
 import java.net.InetSocketAddress;
 import java.rmi.registry.Registry;
@@ -170,6 +168,19 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
                                     } catch (ProjectNameAlreadyInUse e) {
                                         key.attach("ko:409:Project name already in use");
                                     }
+                                    break;
+
+                                case "addMember":
+                                    try{
+                                        addMember(cmd[1],cmd[2],cmd[3]);
+                                    } catch (ProjectNotFoundException e) {
+                                        key.attach("ko:404:Project not found");
+                                    } catch (UserNotFoundException e) {
+                                        key.attach("ko:404:User not found");
+                                    }
+                                    break;
+
+                                
                             }
                         }
 
@@ -269,6 +280,24 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
 
         // Creo un nuovo progetto e lo aggiungo al database
         projects.put(projectName, new Project(projectName, getUser(username)));
+    }
+
+    private void addMember(String username, String projectName, String memberUsername)
+            throws IllegalArgumentException, ProjectNotFoundException, UserNotFoundException {
+        // Controllo validità dei parametri
+        if(username.isEmpty()) throw new IllegalArgumentException("username");
+        if(projectName.isEmpty()) throw new IllegalArgumentException("projectName");
+        if(memberUsername.isEmpty()) throw new IllegalArgumentException("memberUsername");
+
+        // Controllo se esiste un progetto con il nome indicato
+        if(!projects.containsKey(projectName)) throw new ProjectNotFoundException(projectName);
+
+        // Controllo che memberUsername sia effettivamente un utente del sistema
+        if(!userExists(memberUsername)) throw new UserNotFoundException(memberUsername);
+
+        // Aggiungo memberUsername come nuovo membro del progetto projectName
+        projects.get(projectName).addMember(getUser(memberUsername));
+
     }
 
     // * UTILS

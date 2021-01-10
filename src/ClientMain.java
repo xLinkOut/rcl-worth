@@ -195,6 +195,16 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
                                     System.out.println("Every project need a name!\n" +
                                             "Usage: createProject projectName");
                                 }
+                                break;
+
+                            case "addMember":
+                                try{
+                                    addMember(cmd[1],cmd[2]);
+                                }catch (ArrayIndexOutOfBoundsException e){
+                                    System.out.println("Something is missing from your request...\n"+
+                                            "Usage: addMember projectName memberUsername");
+                                }
+                                break;
 
                             case "help":
                                 System.out.println(msgHelp);
@@ -269,7 +279,22 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
             if(response[1].equals("409"))
                 System.out.println("The name chosen for the project is already in use, try another one!");
         }
+    }
 
+    private void addMember(String projectName, String memberUsername) throws IOException {
+        // Invio al server il comando per creare un nuovo progetto
+        sendRequest("addMember "+username+" "+projectName+" "+memberUsername);
+        String[] response = readResponse().split(":");
+        if(response[0].equals("ok")){
+            System.out.println("Member "+memberUsername+" added to "+projectName+"!");
+        }else {
+            if(response[1].equals("404")){
+                if(response[2].contains("Project"))
+                    System.out.println("Can't found "+projectName+", are you sure that exists? Try createProject to create a project");
+                else if(response[2].contains("User"))
+                    System.out.println("Can't found an account named "+memberUsername+"! Maybe is a typo?");
+            }
+        }
     }
 
     // * UTILS
