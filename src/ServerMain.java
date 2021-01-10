@@ -8,7 +8,6 @@ import java.net.ServerSocket;
 import java.nio.ByteBuffer;
 import java.nio.channels.*;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.ProviderMismatchException;
 import java.rmi.RemoteException;
 import java.net.InetSocketAddress;
 import java.rmi.registry.Registry;
@@ -203,6 +202,17 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
                                         key.attach("ko:409:A card with the same name already exists");
                                     }
                                     break;
+
+                                case "showCard":
+                                    try{
+                                        key.attach("ok:"+showCard(cmd[1],cmd[2],cmd[3]));
+                                    } catch (ForbiddenException e) {
+                                        key.attach("ko:403:You're not member of this project");
+                                    } catch (ProjectNotFoundException e) {
+                                        key.attach("ko:404:Can't found "+cmd[2]+", are you sure that exists? Try createProject to create a project");
+                                    } catch (CardNotFoundException e) {
+                                        key.attach("ko:404:Can't found "+cmd[3]+", are you sure that exists? Try addCard to create a card");
+                                    }
                             }
                         }
 
@@ -340,21 +350,38 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
         else throw new ForbiddenException();
     }
 
-    private void addCard(String username, String projectName, String cardName, String cardCaption)
+    private void addCard(String username, String projectName, String cardName, String cardDescription)
             throws ProjectNotFoundException, ForbiddenException, CardAlreadyExists {
 
-        if(DEBUG) System.out.println("Server@WORTH > addCard "+username+" "+projectName+" "+cardName+" "+cardCaption);
+        if(DEBUG) System.out.println("Server@WORTH > addCard "+username+" "+projectName+" "+cardName+" "+cardDescription);
 
         // Controllare che il progetto esista
         if(!projects.containsKey(projectName)) throw new ProjectNotFoundException(projectName);
         Project project = projects.get(projectName);
+
         // Controllare che l'utente sia un membro del progetto
         if(!project.getMembers().contains(getUser(username))) throw new ForbiddenException();
         // Controllare che non ci sia già una card con lo stesso nome
         if(project.getCard(cardName) != null) throw new CardAlreadyExists(cardName);
         // Creare la nuova card
-        project.addCard(cardName,cardCaption);
+        project.addCard(cardName,cardDescription);
 
+    }
+
+    private String showCard(String username, String projectName, String cardName)
+            throws CardNotFoundException, ForbiddenException, ProjectNotFoundException {
+        if(DEBUG) System.out.println("Server@WORTH > showCard "+username+" "+projectName+" "+cardName);
+
+        // Controllare che il progetto esista
+        if(!projects.containsKey(projectName)) throw new ProjectNotFoundException(projectName);
+        Project project = projects.get(projectName);
+
+        // Controllare che l'utente sia un membro del progetto
+        if(!project.getMembers().contains(getUser(username))) throw new ForbiddenException();
+
+        Card card = project.getCard(cardName);
+        if(card == null) throw new CardNotFoundException(cardName);
+        return card.toString();
     }
 
     // * UTILS

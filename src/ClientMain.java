@@ -215,7 +215,13 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
                                 break;
 
                             case "showMembers":
-                                showMembers(cmd[1]);
+                                try{
+                                    showMembers(cmd[1]);
+                                } catch (IllegalArgumentException e) {
+                                    e.printStackTrace();
+                                } catch (IOException e) {
+                                    e.printStackTrace();
+                                }
                                 break;
 
                             case "addCard":
@@ -231,6 +237,16 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
                                 }
                                 break;
 
+                            case "showCard":
+                                try{
+                                    showCard(cmd[1],cmd[2]);
+                                } catch (IllegalArgumentException iae) {
+                                    System.out.println(iae.getMessage());
+                                } catch (ArrayIndexOutOfBoundsException e) {
+                                    System.out.println("Something is missing from your request...\n"+
+                                            "Usage: showCard projectName cardName");
+                                }
+                                break;
 
                             case "help":
                                 System.out.println(msgHelp);
@@ -352,14 +368,14 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
         }
     }
 
-    private void addCard(String projectName, String cardName, String cardCaption)
+    private void addCard(String projectName, String cardName, String cardDescription)
             throws IllegalArgumentException, IOException {
         // Controllo validità dei parametri
         if(projectName.isEmpty()) throw new IllegalArgumentException("projectName");
         if(cardName.isEmpty()) throw new IllegalArgumentException("cardName");
-        if(cardCaption.isEmpty()) throw new IllegalArgumentException("cardCaption");
+        if(cardDescription.isEmpty()) throw new IllegalArgumentException("cardDescription");
 
-        sendRequest("addCard "+username+" "+projectName+" "+cardName+" "+cardCaption);
+        sendRequest("addCard "+username+" "+projectName+" "+cardName+" "+cardDescription);
         String[] response = readResponse().split(":");
         if(response[0].equals("ok")){
             System.out.println(response[1]);
@@ -368,6 +384,23 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
             System.out.println(response[2]);
         }
 
+    }
+
+    private void showCard(String projectName, String cardName)
+            throws IllegalArgumentException, IOException {
+        // Controllo validità dei parametri
+        if(projectName.isEmpty()) throw new IllegalArgumentException("projectName");
+        if(cardName.isEmpty()) throw new IllegalArgumentException("cardName");
+
+        sendRequest("showCard "+username+" "+projectName+" "+cardName);
+        String[] response = readResponse().split(":");
+        if(response[0].equals("ok")){
+            System.out.println("Some information about the "+cardName+" card:");
+            System.out.println(response[1]);
+        }else {
+            //if(DEBUG) System.out.print("["+response[1]+"] ");
+            System.out.println(response[2]);
+        }
     }
     // * UTILS
     private void sendRequest(String request) throws IOException {

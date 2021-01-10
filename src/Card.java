@@ -27,4 +27,11 @@ public class Card {
     public void setHistory(String history) { this.history += history + "|"; }
 
     public void addHistory(Project.Section section) {this.history += section.toString() + "|"; }
+
+    public String toString(){
+        return
+            "- Name > " + this.name + "\n" +
+            "- Description > " + this.description + "\n" +
+            "- Currently in > " + this.section.toString();
+    }
 }
