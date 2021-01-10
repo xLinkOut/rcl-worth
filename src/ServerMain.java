@@ -143,43 +143,43 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
                                 case "login":
                                     try {
                                         login(cmd[1], cmd[2]);
-                                        key.attach("ok");
-                                    } catch (UserNotFoundException e) {
-                                        key.attach("ko:404:User not found");
+                                        key.attach("ok:Great! Now your are logged as "+cmd[1]+"!");
                                     } catch (AuthFailException e) {
-                                        key.attach("ko:401:Wrong password");
+                                        key.attach("ko:401:The password you entered is incorrect, please try again");
+                                    } catch (UserNotFoundException e) {
+                                        key.attach("ko:404:Are you sure that an account with this name exists?\nIf you need one, use register command");
                                     }
                                     break;
 
                                 case "logout":
                                     try{
                                         logout(cmd[1]);
-                                        key.attach("ok");
+                                        key.attach("ok:You have been logged out successfully");
                                     } catch (UserNotFoundException e) {
-                                        // In teoria, non può succedere per via dell'implementazione del client
-                                        key.attach("ko:404:User not found");
+                                        // In teoria, non può succedere per via di come il client è stato implementato
+                                        key.attach("ko:404:Are you sure that an account with this name exists?\nIf you need one, use register command");
                                     }
                                     break;
 
                                 case "createProject":
                                     try{
                                         createProject(cmd[1],cmd[2]);
-                                        key.attach("ok");
+                                        key.attach("ok:Project "+cmd[2]+" created!\nCurrently you're the only member. Try use addMember to invite some coworkers");
                                     } catch (ProjectNameAlreadyInUse e) {
-                                        key.attach("ko:409:Project name already in use");
+                                        key.attach("ko:409:The name chosen for the project is already in use, try another one!");
                                     }
                                     break;
 
                                 case "addMember":
                                     try{
                                         addMember(cmd[1],cmd[2],cmd[3]);
-                                        key.attach("ok");
+                                        key.attach("ok:Member "+cmd[3]+" added to "+cmd[2]+"!");
                                     } catch (ProjectNotFoundException e) {
-                                        key.attach("ko:404:Project not found");
+                                        key.attach("ko:404:Can't found "+cmd[2]+", are you sure that exists? Try createProject to create a project");
                                     } catch (UserNotFoundException e) {
-                                        key.attach("ko:404:User not found");
+                                        key.attach("ko:404:Can't found an account named "+cmd[3]+"! Maybe is a typo?");
                                     } catch (AlreadyMemberException e) {
-                                        key.attach("ko:409:Already member");
+                                        key.attach("ko:409:"+cmd[3]+" is already a member of "+cmd[2]);
                                     }
                                     break;
 
@@ -189,20 +189,20 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
                                     } catch (ForbiddenException e) {
                                         key.attach("ko:403:You're not member of this project");
                                     } catch (ProjectNotFoundException e) {
-                                        key.attach("ko:404:Project not found");
+                                        key.attach("ko:404:Can't found "+cmd[2]+", are you sure that exists? Try createProject to create a project");
                                     }
                                     break;
 
                                 case "addCard":
                                     try{
                                         addCard(cmd[1],cmd[2],cmd[3],cmd[4]);
-                                        key.attach("ok");
+                                        key.attach("ok:Card "+cmd[3]+" created");
                                     } catch (ForbiddenException e) {
                                         key.attach("ko:403:You're not member of this project");
                                     } catch (ProjectNotFoundException e) {
-                                        key.attach("ko:404:Project not found");
+                                        key.attach("ko:404:Can't found "+cmd[2]+", are you sure that exists? Try createProject to create a project");
                                     } catch (CardAlreadyExists cardAlreadyExists) {
-                                        key.attach("ko:409:Card name already in use");
+                                        key.attach("ko:409:A card with the same name already exists");
                                     }
                                     break;
                             }

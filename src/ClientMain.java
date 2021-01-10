@@ -253,20 +253,18 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
             ClientMain.username = username;
             // Registro il client per la ricezione delle callback
             server.registerCallback(notifyStub);
-            System.out.println("Great! Now your are logged as " + username + "!");
+            System.out.println(response[1]);
         }else {
-            if(response[1].equals("401"))
-                System.out.println("The password you entered is incorrect, please try again");
-            else if(response[1].equals("404"))
-                System.out.println("Are you sure that an account with this name exists?\n" +
-                        "If you need one, use register command");
+            // Stampo il codice dell'operazione soltanto se sono in modalità debug
+            //if(DEBUG) System.out.print("["+response[1]+"] ");
+            System.out.println(response[2]);
         }
     }
 
     private void logout() throws IOException {
         // Invio al server il comando di logout
         sendRequest("logout "+username);
-        // Se tutto ok, ritorno true
+        // Se tutto ok
         String[] response = readResponse().split(":");
         if(response[0].equals("ok")){
             // Registro l'esito positivo del logout
@@ -274,11 +272,10 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
             username = "Guest";
             // Disiscrivo il client dalla ricezione delle callbacks
             server.unregisterCallback(notifyStub);
-            System.out.println("You have been logged out successfully");
+            System.out.println(response[1]);
         }else {
-            if(response[1].equals("404"))
-                System.out.println("Are you sure that an account with this name exists?\n" +
-                        "If you need one, use register command");
+            //if(DEBUG) System.out.print("["+response[1]+"] ");
+            System.out.println(response[2]);
         }
     }
 
@@ -292,11 +289,10 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
         // Se tutto ok
         String[] response = readResponse().split(":");
         if(response[0].equals("ok")){
-            System.out.println("Project "+projectName+" created!\n" +
-                    "Currently you're the only member. Try use addMember to invite some coworkers");
+            System.out.println(response[1]);
         }else {
-            if(response[1].equals("409"))
-                System.out.println("The name chosen for the project is already in use, try another one!");
+            //if(DEBUG) System.out.print("["+response[1]+"] ");
+            System.out.println(response[2]);
         }
     }
 
@@ -310,14 +306,10 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
         sendRequest("addMember "+username+" "+projectName+" "+memberUsername);
         String[] response = readResponse().split(":");
         if(response[0].equals("ok")){
-            System.out.println("Member "+memberUsername+" added to "+projectName+"!");
+            System.out.println(response[1]);
         }else {
-            if(response[1].equals("404")){
-                if(response[2].contains("Project"))
-                    System.out.println("Can't found "+projectName+", are you sure that exists? Try createProject to create a project");
-                else if(response[2].contains("User"))
-                    System.out.println("Can't found an account named "+memberUsername+"! Maybe is a typo?");
-            }
+            //if(DEBUG) System.out.print("["+response[1]+"] ");
+            System.out.println(response[2]);
         }
     }
 
@@ -332,12 +324,8 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
             System.out.println("These are the members of the project "+projectName+"\n");
             // [User@48140564, User@58ceff1]
         }else {
-            if(response[1].equals("403"))
-                System.out.println(response[2]);
-            else if(response[1].equals("404"))
-                System.out.println("Can't found "+projectName+", are you sure that exists? Try createProject to create a project");
-            else if(response[1].equals("409"))
-                System.out.println(response[2]);
+            //if(DEBUG) System.out.print("["+response[1]+"] ");
+            System.out.println(response[2]);
         }
     }
 
@@ -351,14 +339,10 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
         sendRequest("addCard "+username+" "+projectName+" "+cardName+" "+cardCaption);
         String[] response = readResponse().split(":");
         if(response[0].equals("ok")){
-            System.out.println("Card created");
+            System.out.println(response[1]);
         }else {
-            if(response[1].equals("403"))
-                System.out.println(response[2]);
-            else if(response[1].equals("404"))
-                System.out.println("Can't found "+projectName+", are you sure that exists? Try createProject to create a project");
-            else if(response[1].equals("409"))
-                System.out.println(response[2]);
+            //if(DEBUG) System.out.print("["+response[1]+"] ");
+            System.out.println(response[2]);
         }
 
     }
@@ -392,7 +376,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
             // Finché ci sono bytes da leggere, continuo
         } while (bytesRead >= 1024);
 
-        System.out.println("Server@WORTH < "+serverResponse.toString());
+        //if(DEBUG) System.out.println("Server@WORTH < "+serverResponse.toString());
         return serverResponse.toString();
     }
 
