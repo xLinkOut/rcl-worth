@@ -48,14 +48,18 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
                                                    \s""";
     private static final String msgHelpGuest =
         """
-        You need to login to WORTH in order to use it.
-        \tregister username password |\tCreate a new WORTH account;
-        \tlogin username password |\tLogin to WORTH using your credentials;
-        \thelp |\tShow this help;
-        \tquit |\tClose WORTH.""";
+        You need to login to WORTH in order to use it. Here some commands:
+        \tregister username password | Create a new WORTH account;
+        \tlogin    username password | Login to WORTH using your credentials;
+        \thelp                       | Show this help;
+        \tquit                       | Close WORTH.
+        """;
     private static final String msgHelp =
         """
-        Bro, you stuck?            
+        createProject projectName    | Create a new project named <projectName>
+        \tlogout                     | Logout from your WORTH
+        \thelp                       | Show this help;
+        \tquit                       | Close WORTH.
         """;
 
     public ClientMain(){
@@ -85,7 +89,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
                 Registry registry = LocateRegistry.getRegistry(PORT_RMI);
                 // Chiamo la lookup sullo stesso nome del server
                 server = (ServerRMI) registry.lookup(NAME_RMI);
-                System.out.println("[RMI] Connected to: " + server.toString());
+                System.out.println("[RMI] Connected to: " + NAME_RMI);
                 // Esporto l'oggetto Client per le callback
                 notifyStub = (NotifyEventInterface)
                         UnicastRemoteObject.exportObject(this,0);
@@ -95,15 +99,12 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
                 System.exit(-1);
             }
 
-
             // * CLI Setup
             Scanner scanner = new Scanner(System.in);
             String[] cmd;
 
-
-
-
             // * Shell
+            System.out.println();
             System.out.println(msgHelpGuest);
 
             while(true){
@@ -252,6 +253,10 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
                 System.out.println("Are you sure that an account with this name exists?\n" +
                         "If you need one, use register command");
         }
+    }
+
+    private void createProject(String projectName){
+
     }
 
     // * UTILS
