@@ -210,6 +210,12 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
                                 showMembers(cmd[1]);
                                 break;
 
+                            case "addCard":
+                                // TODO: Unire la caption su cmd[3]
+                                addCard(cmd[1],cmd[2],cmd[3]);
+                                break;
+
+
                             case "help":
                                 System.out.println(msgHelp);
                                 break;
@@ -317,6 +323,21 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
         }
     }
 
+    private void addCard(String projectName, String cardName, String cardCaption) throws IOException {
+        sendRequest("addCard "+username+" "+projectName+" "+cardName+" "+cardCaption);
+        String[] response = readResponse().split(":");
+        if(response[0].equals("ok")){
+            System.out.println("Card created");
+        }else {
+            if(response[1].equals("403"))
+                System.out.println(response[2]);
+            else if(response[1].equals("404"))
+                System.out.println("Can't found "+projectName+", are you sure that exists? Try createProject to create a project");
+            else if(response[1].equals("409"))
+                System.out.println(response[2]);
+        }
+
+    }
     // * UTILS
     private void sendRequest(String request) throws IOException {
         socketChannel.write(ByteBuffer.wrap((request).getBytes(StandardCharsets.UTF_8)));

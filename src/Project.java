@@ -24,19 +24,19 @@ public class Project {
 
     public String getName() { return name; }
 
-    public boolean addMember(User member){
-        if(members.contains(member)) return false;
-        return members.add(member);
+    public void addMember(User member){
+        if(members.contains(member)) return;
+        members.add(member);
     }
 
     public List<User> getMembers(){
         return members;
     }
 
-    public boolean addCard(String name, String description){
+    public void addCard(String name, String description){
         Card card = new Card(name, description);
-        if(getCard(name, Section.TODO) != null) return false;
-        return todo.add(card);
+        if(getCard(name, Section.TODO) != null) return;
+        todo.add(card);
     }
 
     public Card getCard(String name){

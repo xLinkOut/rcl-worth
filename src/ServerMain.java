@@ -192,6 +192,19 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
                                         key.attach("ko:404:Project not found");
                                     }
                                     break;
+
+                                case "addCard":
+                                    try{
+                                        addCard(cmd[1],cmd[2],cmd[3],cmd[4]);
+                                        key.attach("ok");
+                                    } catch (ForbiddenException e) {
+                                        key.attach("ko:403:You're not member of this project");
+                                    } catch (ProjectNotFoundException e) {
+                                        key.attach("ko:404:Project not found");
+                                    } catch (CardAlreadyExists cardAlreadyExists) {
+                                        key.attach("ko:409:Card name already in use");
+                                    }
+                                    break;
                             }
                         }
 
@@ -331,6 +344,20 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
         if(project.getMembers().contains(getUser(username)))
             return project.getMembers().toString();
         else throw new ForbiddenException();
+    }
+
+    private void addCard(String username, String projectName, String cardName, String cardCaption)
+            throws ProjectNotFoundException, ForbiddenException, CardAlreadyExists {
+        // Controllare che il progetto esista
+        if(!projects.containsKey(projectName)) throw new ProjectNotFoundException(projectName);
+        Project project = projects.get(projectName);
+        // Controllare che l'utente sia un membro del progetto
+        if(!project.getMembers().contains(getUser(username))) throw new ForbiddenException();
+        // Controllare che non ci sia già una card con lo stesso nome
+        if(project.getCard(cardName) != null) throw new CardAlreadyExists(cardName);
+        // Creare la nuova card
+        project.addCard(cardName,cardCaption);
+
     }
 
     // * UTILS
