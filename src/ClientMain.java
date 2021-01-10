@@ -56,7 +56,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
         """;
     private static final String msgHelp =
         """
-        createProject projectName    | Create a new project named <projectName>
+        \tcreateProject projectName    | Create a new project named <projectName>
         \tlogout                     | Logout from your WORTH
         \thelp                       | Show this help;
         \tquit                       | Close WORTH.
@@ -188,11 +188,13 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
                                 logout();
                                 break;
 
-                            case "listUsers": // LOCAL, UPDATE BY RMI CALLBACK
-                                break;
-                            case "listOnlineusers": // LOCAL, UPDATE BY RMI CALLBACK
-                                break;
-
+                            case "createProject":
+                                try{
+                                    createProject(cmd[1]);
+                                }catch(ArrayIndexOutOfBoundsException e){
+                                    System.out.println("Every project need a name!\n" +
+                                            "Usage: createProject projectName");
+                                }
 
                             case "help":
                                 System.out.println(msgHelp);
@@ -203,7 +205,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
                                 System.exit(0);
                                 break;
                             default:
-                                System.out.println("Command not recognized or not available as a guest, please login.");
+                                System.out.println("Command not recognized. Type help if you're stuck!");
                         }
                     }else{ System.out.println(msgHelpGuest); }
                 } catch (IOException ioe){ioe.printStackTrace();}
@@ -255,7 +257,18 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
         }
     }
 
-    private void createProject(String projectName){
+    private void createProject(String projectName) throws IOException {
+        // Invio al server il comando per creare un nuovo progetto
+        sendRequest("createProject "+username+" "+projectName);
+        // Se tutto ok
+        String[] response = readResponse().split(":");
+        if(response[0].equals("ok")){
+            System.out.println("Project "+projectName+" created!\n+" +
+                    "Currently you're the only member. Try use addMember to invite some coworkers");
+        }else {
+            if(response[1].equals("409"))
+                System.out.println("The name chosen for the project is already in use, try another one!");
+        }
 
     }
 

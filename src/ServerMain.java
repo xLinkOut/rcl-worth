@@ -1,6 +1,7 @@
 // @author Luca Cirillo (545480)
 
 import WorthExceptions.AuthFailException;
+import WorthExceptions.ProjectNameAlreadyInUse;
 import WorthExceptions.UserNotFoundException;
 import WorthExceptions.UsernameAlreadyTakenException;
 import com.google.gson.Gson;
@@ -20,6 +21,8 @@ import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 @SuppressWarnings("ConstantConditions")
 public class ServerMain extends RemoteObject implements Server, ServerRMI{
@@ -34,6 +37,7 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
     private final List<User> users;
     private final List<PublicUser> publicUsers;
     private final List<NotifyEventInterface> clients;
+    private final Map<String, Project> projects;
     private static final Gson gson = new Gson();
 
     public ServerMain(){
@@ -44,6 +48,7 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
         // Persistenza
         this.users = new ArrayList<>();
         this.publicUsers = new ArrayList<>();
+        this.projects = new ConcurrentHashMap<>();
     }
 
     private void live() {
@@ -157,6 +162,14 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
                                         key.attach("ko:404:User not found");
                                     }
                                     break;
+
+                                case "createProject":
+                                    try{
+                                        createProject(cmd[1],cmd[2]);
+                                        key.attach("ok");
+                                    } catch (ProjectNameAlreadyInUse e) {
+                                        key.attach("ko:409:Project name already in use");
+                                    }
                             }
                         }
 
@@ -242,6 +255,20 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
         // Aggiorno tutti gli altri clients con una callback
         try { sendCallbacks(); }
         catch (RemoteException e) {e.printStackTrace();}
+    }
+
+    // Utente richiede la creazione di un nuovo progetto
+    private void createProject(String username, String projectName)
+            throws IllegalArgumentException, ProjectNameAlreadyInUse {
+        // Controllo validità dei parametri
+        if(username.isEmpty()) throw new IllegalArgumentException("username");
+        if(projectName.isEmpty()) throw new IllegalArgumentException("projectName");
+
+        // Controllare che non esista già un progetto con lo stesso nome
+        if(projects.containsKey(projectName)) throw new ProjectNameAlreadyInUse(projectName);
+
+        // Creo un nuovo progetto e lo aggiungo al database
+        projects.put(projectName, new Project(projectName, getUser(username)));
     }
 
     // * UTILS
