@@ -337,8 +337,15 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
         sendRequest("showMembers "+username+" "+projectName);
         String[] response = readResponse().split(":");
         if(response[0].equals("ok")){
-            System.out.println("These are the members of the project "+projectName+"\n");
-            // [User@48140564, User@58ceff1]
+            System.out.println("These are the members of the project "+projectName+":");
+            // Parso la lista inviata dal server
+            String[] membersList = response[1].substring(1,response[1].length()-1).split(" ");
+            for (String s : membersList) {
+                if (s.charAt(s.length() - 1) == ',')
+                    System.out.println("\t- " + s.substring(0, s.length() - 1));
+                else // Last member
+                    System.out.println("\t- " + s);
+            }
         }else {
             //if(DEBUG) System.out.print("["+response[1]+"] ");
             System.out.println(response[2]);

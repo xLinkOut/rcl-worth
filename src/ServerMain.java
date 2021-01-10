@@ -16,11 +16,9 @@ import java.rmi.server.RemoteObject;
 import java.rmi.AlreadyBoundException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.server.UnicastRemoteObject;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 @SuppressWarnings("ConstantConditions")
 public class ServerMain extends RemoteObject implements Server, ServerRMI{
@@ -336,7 +334,9 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
         Project project = projects.get(projectName);
         // Se l'utente è un membro del progetto, può consultare la lista membri
         if(project.getMembers().contains(getUser(username)))
-            return project.getMembers().toString();
+            return project.getMembers().stream()
+                .map(User::getUsername)
+                .collect(Collectors.toList()).toString();
         else throw new ForbiddenException();
     }
 
