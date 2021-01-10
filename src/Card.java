@@ -1,33 +1,30 @@
 
 public class Card {
 
+    private final String name;        // Nome della Card (univoco nell'ambito del progetto)
+    private final String description; // Descrizione della Card
 
+    private String history;           // Storia dei movimenti, definita come Section1|...|SectionN
+    private Project.Section section;  // Lista in cui si trova attualmente la Card
 
-    public enum Status { TODO, INPROGRESS, TOBEREVISED, DONE };
-
-    private final String name;
-    private final String caption;
-    private Status status;
-
-    public Card(String name, String caption){
+    public Card(String name, String description){
         this.name = name;
-        this.caption = caption;
-        this.status = Status.TODO;
+        this.description = description;
+        this.section = Project.Section.TODO;
+        this.history = Project.Section.TODO.toString() + "|";
     }
 
-    public String getName() {
-        return name;
-    }
+    public String getName() { return name; }
 
-    public String getCaption() {
-        return caption;
-    }
+    public String getDescription() { return description; }
 
-    public Status getStatus() {
-        return status;
-    }
+    public Project.Section getSection() { return section; }
 
-    public void setStatus(Status status) {
-        this.status = status;
-    }
+    public void setSection(Project.Section section) { this.section = section; }
+
+    public String getHistory() { return history; }
+
+    public void setHistory(String history) { this.history += history + "|"; }
+
+    public void addHistory(Project.Section section) {this.history += section.toString() + "|"; }
 }
