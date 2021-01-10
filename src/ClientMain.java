@@ -57,6 +57,9 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
     private static final String msgHelp =
         """
         \tcreateProject projectName    | Create a new project named <projectName>
+        \taddMember
+        \tshowMembers
+        \taddCard
         \tlogout                     | Logout from your WORTH
         \thelp                       | Show this help;
         \tquit                       | Close WORTH.
@@ -117,6 +120,8 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
                             switch (cmd[0]) {
                                 case "register":
                                     try {
+                                        if(cmd[1].contains(":")) throw new IllegalArgumentException("Colon character (:) not allowed in username");
+                                        if(cmd[2].contains(":")) throw new IllegalArgumentException("Colon character (:) not allowed in password");
                                         server.register(cmd[1], cmd[2]);
                                         // Registrazione avvenuta con successo
                                         System.out.println("Signup was successful!\nI try to automatically login to WORTH, wait..");
@@ -125,8 +130,8 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
 
                                     } catch (IllegalArgumentException iae) {
                                         // Se almeno uno dei due parametri risulta invalido
-                                        System.out.println("Insert a valid " + iae.getMessage() +
-                                                "Usage: register username password");
+                                        System.out.println(iae.getMessage());
+                                        System.out.println("Usage: register username password");
 
                                     } catch (ArrayIndexOutOfBoundsException e) {
                                         // Se almeno uno dei due parametri tra username e password non è presente
@@ -190,10 +195,13 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
 
                             case "createProject":
                                 try{
+                                    if(cmd[1].contains(":")) throw new IllegalArgumentException("Colon character (:) not allowed in project name");
                                     createProject(cmd[1]);
                                 }catch(ArrayIndexOutOfBoundsException e){
                                     System.out.println("Every project need a name!\n" +
                                             "Usage: createProject projectName");
+                                }catch (IllegalArgumentException iae){
+                                    System.out.println(iae.getMessage());
                                 }
                                 break;
 
@@ -211,8 +219,16 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
                                 break;
 
                             case "addCard":
-                                // TODO: Unire la caption su cmd[3]
-                                addCard(cmd[1],cmd[2],cmd[3]);
+                                try {
+                                    if (cmd[1].contains(":")) throw new IllegalArgumentException("Colon character (:) not allowed in username\n");
+                                    // TODO: Unire la caption su cmd[3]
+                                    addCard(cmd[1], cmd[2], cmd[3]);
+                                } catch (IllegalArgumentException iae) {
+                                    System.out.println(iae.getMessage());
+                                } catch (ArrayIndexOutOfBoundsException e){
+                                    System.out.println("Something is missing from your request...\n"+
+                                            "Usage: addCard projectName cardName cardCaption");
+                                }
                                 break;
 
 
