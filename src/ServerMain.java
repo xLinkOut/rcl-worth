@@ -252,10 +252,8 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
 
     // Permette ad un utente di utilizzare il sistema
     private void login(String username, String password)
-            throws IllegalArgumentException, UserNotFoundException, AuthFailException {
-        // Controllo validità dei parametri
-        if(username.isEmpty()) throw new IllegalArgumentException("username");
-        if(password.isEmpty()) throw new IllegalArgumentException("password");
+            throws UserNotFoundException, AuthFailException {
+        if(DEBUG) System.out.println("Server@WORTH > login "+username+" "+password);
 
         // Controllo l'esistenza dell'utente
         if(!userExists(username)) throw new UserNotFoundException(username);
@@ -274,9 +272,9 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
 
     // Utente abbandona correttamente il sistema
     private void logout(String username)
-            throws IllegalArgumentException, UserNotFoundException {
-        // Controllo validità dei parametri
-        if(username.isEmpty()) throw new IllegalArgumentException("username");
+            throws UserNotFoundException {
+
+        if(DEBUG) System.out.println("Server@WORTH > logout "+username);
 
         // Controllo l'esistenza dell'utente
         if(!userExists(username)) throw new UserNotFoundException(username);
@@ -294,10 +292,9 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
 
     // Utente richiede la creazione di un nuovo progetto
     private void createProject(String username, String projectName)
-            throws IllegalArgumentException, ProjectNameAlreadyInUse {
-        // Controllo validità dei parametri
-        if(username.isEmpty()) throw new IllegalArgumentException("username");
-        if(projectName.isEmpty()) throw new IllegalArgumentException("projectName");
+            throws ProjectNameAlreadyInUse {
+
+        if(DEBUG) System.out.println("Server@WORTH > createProject "+username+" "+projectName);
 
         // Controllare che non esista già un progetto con lo stesso nome
         if(projects.containsKey(projectName)) throw new ProjectNameAlreadyInUse(projectName);
@@ -307,11 +304,9 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
     }
 
     private void addMember(String username, String projectName, String memberUsername)
-            throws IllegalArgumentException, ProjectNotFoundException, UserNotFoundException, AlreadyMemberException {
-        // Controllo validità dei parametri
-        if(username.isEmpty()) throw new IllegalArgumentException("username");
-        if(projectName.isEmpty()) throw new IllegalArgumentException("projectName");
-        if(memberUsername.isEmpty()) throw new IllegalArgumentException("memberUsername");
+            throws ProjectNotFoundException, UserNotFoundException, AlreadyMemberException {
+
+        if(DEBUG) System.out.println("Server@WORTH > addMember "+username+" "+projectName+" "+memberUsername);
 
         // Controllo se esiste un progetto con il nome indicato
         if(!projects.containsKey(projectName)) throw new ProjectNotFoundException(projectName);
@@ -331,10 +326,9 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
     }
 
     private String showMembers(String username, String projectName)
-            throws IllegalArgumentException, ProjectNotFoundException, ForbiddenException {
-        // Controllo validità dei parametri
-        if(username.isEmpty()) throw new IllegalArgumentException("username");
-        if(projectName.isEmpty()) throw new IllegalArgumentException("projectName");
+            throws ProjectNotFoundException, ForbiddenException {
+
+        if(DEBUG) System.out.println("Server@WORTH > showMembers "+username+" "+projectName);
 
         // Controllo se esiste un progetto con il nome indicato
         if(!projects.containsKey(projectName)) throw new ProjectNotFoundException(projectName);
@@ -348,6 +342,9 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
 
     private void addCard(String username, String projectName, String cardName, String cardCaption)
             throws ProjectNotFoundException, ForbiddenException, CardAlreadyExists {
+
+        if(DEBUG) System.out.println("Server@WORTH > addCard "+username+" "+projectName+" "+cardName+" "+cardCaption);
+
         // Controllare che il progetto esista
         if(!projects.containsKey(projectName)) throw new ProjectNotFoundException(projectName);
         Project project = projects.get(projectName);
