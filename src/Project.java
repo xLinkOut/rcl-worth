@@ -92,7 +92,7 @@ public class Project {
                 && toBeRevised.isEmpty() && !done.isEmpty();
     }
 
-    private List<Card> getList(Section section){
+    public List<Card> getList(Section section){
         switch (section){
             case TODO: return todo;
             case INPROGRESS: return inProgress;

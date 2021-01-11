@@ -252,6 +252,10 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
                                 listProjects();
                                 break;
 
+                            case "showCards":
+                                showCards(cmd[1]);
+                                break;
+
                             case "help":
                                 System.out.println(msgHelp);
                                 break;
@@ -424,6 +428,35 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
             //if(DEBUG) System.out.print("["+response[1]+"] ");
             System.out.println(response[2]);
         }
+    }
+
+    private void showCards(String projectName)
+            throws IOException, IllegalArgumentException {
+        // Controllo validità dei parametri
+        if(projectName.isEmpty()) throw new IllegalArgumentException("projectName");
+        sendRequest("showCards "+username+" "+projectName);
+        String[] response = readResponse().split(":");
+        if(response[0].equals("ok")){
+            System.out.println("Showcase of "+projectName+":");
+            System.out.println(response[1]);
+            // TODO: implement after moveCard
+            /*
+            //String[] projectsList = response[1].substring(1,response[1].length()-1).split(" ");
+            //System.out.format("%32s%10d%16s", string1, int1, string2);
+            // Devo ciclare per per la stringa più lunga
+
+            // Parso la lista inviata dal server
+            for (String s : projectsList) {
+                if (s.charAt(s.length() - 1) == ',')
+                    System.out.println("\t- " + s.substring(0, s.length() - 1));
+                else // Last member
+                    System.out.println("\t- " + s);
+            }*/
+        }else {
+            //if(DEBUG) System.out.print("["+response[1]+"] ");
+            System.out.println(response[2]);
+        }
+
     }
     // * UTILS
     private void sendRequest(String request) throws IOException {

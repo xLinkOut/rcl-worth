@@ -217,6 +217,15 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
                                     }
                                     break;
 
+                                case "showCards":
+                                    try{
+                                        key.attach("ok:"+showCards(cmd[1],cmd[2]));
+                                    } catch (ForbiddenException e) {
+                                        key.attach("ko:403:You're not member of this project");
+                                    } catch (ProjectNotFoundException e) {
+                                        key.attach("ko:404:Can't found "+cmd[2]+", are you sure that exists? Try createProject to create a project");
+                                    }
+
                                 case "listProjects":
                                     try{
                                         key.attach("ok:"+listProjects(cmd[1]));
@@ -411,6 +420,35 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
         return list.stream()
                 .map(Project::getName)
                 .collect(Collectors.toList()).toString();
+    }
+
+    private String showCards(String username, String projectName)
+            throws ProjectNotFoundException, ForbiddenException {
+        if(DEBUG) System.out.println("Server@WORTH > showCards "+username+" "+projectName);
+
+        // Controllare che il progetto esista
+        if(!projects.containsKey(projectName)) throw new ProjectNotFoundException(projectName);
+        Project project = projects.get(projectName);
+
+        // Controllare che l'utente sia un membro del progetto
+        if(!project.getMembers().contains(getUser(username))) throw new ForbiddenException();
+
+        StringBuilder output = new StringBuilder();
+        for(Project.Section section : Project.Section.values()){
+            output.append(project.getList(section).stream()
+                    .map(Card::getName).collect(Collectors.toList()).toString()).append(":");
+        }
+        /*
+        output.append(project.getList(Project.Section.TODO).stream()
+                .map(Card::getName).collect(Collectors.toList()).toString()).append(":");
+        output.append(project.getList(Project.Section.TODO).stream()
+                .map(Card::getName).collect(Collectors.toList()).toString()).append(":");
+        output.append(project.getList(Project.Section.TODO).stream()
+                .map(Card::getName).collect(Collectors.toList()).toString()).append(":");
+        output.append(project.getList(Project.Section.TODO).stream()
+                .map(Card::getName).collect(Collectors.toList()).toString());
+        */
+        return output.toString();
     }
 
     // * UTILS
