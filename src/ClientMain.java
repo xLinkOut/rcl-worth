@@ -217,10 +217,8 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
                             case "showMembers":
                                 try{
                                     showMembers(cmd[1]);
-                                } catch (IllegalArgumentException e) {
-                                    e.printStackTrace();
-                                } catch (IOException e) {
-                                    e.printStackTrace();
+                                } catch (IllegalArgumentException iae) {
+                                    System.out.println(iae.getMessage());
                                 }
                                 break;
 
@@ -286,7 +284,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
         sendRequest("login "+username+" "+password);
         // Se tutto ok, aggiorno i parametri, registro il client
         // per le callbacks e ritorno true
-        String[] response = readResponse().split(":");
+        String[] response = readResponse();
         if(response[0].equals("ok")){
             // Registro l'esito positivo del login
             logged = true;
@@ -305,7 +303,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
         // Invio al server il comando di logout
         sendRequest("logout "+username);
         // Se tutto ok
-        String[] response = readResponse().split(":");
+        String[] response = readResponse();
         if(response[0].equals("ok")){
             // Registro l'esito positivo del logout
             logged = false;
@@ -327,7 +325,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
         // Invio al server il comando per creare un nuovo progetto
         sendRequest("createProject "+username+" "+projectName);
         // Se tutto ok
-        String[] response = readResponse().split(":");
+        String[] response = readResponse();
         if(response[0].equals("ok")){
             System.out.println(response[1]);
         }else {
@@ -344,7 +342,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
 
         // Invio al server il comando per aggiungere un nuovo utente al progetto
         sendRequest("addMember "+username+" "+projectName+" "+memberUsername);
-        String[] response = readResponse().split(":");
+        String[] response = readResponse();
         if(response[0].equals("ok")){
             System.out.println(response[1]);
         }else {
@@ -359,7 +357,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
         if(projectName.isEmpty()) throw new IllegalArgumentException("projectName");
 
         sendRequest("showMembers "+username+" "+projectName);
-        String[] response = readResponse().split(":");
+        String[] response = readResponse();
         if(response[0].equals("ok")){
             System.out.println("These are the members of the project "+projectName+":");
             // Parso la lista inviata dal server
@@ -384,7 +382,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
         if(cardDescription.isEmpty()) throw new IllegalArgumentException("cardDescription");
 
         sendRequest("addCard "+username+" "+projectName+" "+cardName+" "+cardDescription);
-        String[] response = readResponse().split(":");
+        String[] response = readResponse();
         if(response[0].equals("ok")){
             System.out.println(response[1]);
         }else {
@@ -401,7 +399,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
         if(cardName.isEmpty()) throw new IllegalArgumentException("cardName");
 
         sendRequest("showCard "+username+" "+projectName+" "+cardName);
-        String[] response = readResponse().split(":");
+        String[] response = readResponse();
         if(response[0].equals("ok")){
             System.out.println("Some information about the "+cardName+" card:");
             System.out.println(response[1]);
@@ -413,7 +411,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
 
     private void listProjects() throws IOException {
         sendRequest("listProjects "+username);
-        String[] response = readResponse().split(":");
+        String[] response = readResponse();
         if(response[0].equals("ok")){
             System.out.println("These are the projects you are a member of:");
             // Parso la lista inviata dal server
@@ -435,7 +433,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
         // Controllo validità dei parametri
         if(projectName.isEmpty()) throw new IllegalArgumentException("projectName");
         sendRequest("showCards "+username+" "+projectName);
-        String[] response = readResponse().split(":");
+        String[] response = readResponse();
         if(response[0].equals("ok")){
             System.out.println("Showcase of "+projectName+":");
             System.out.println(response[1]);
@@ -463,7 +461,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
         socketChannel.write(ByteBuffer.wrap((request).getBytes(StandardCharsets.UTF_8)));
     }
 
-    private String readResponse() throws IOException {
+    private String[] readResponse() throws IOException {
         // Alloco un buffer di <DIM_BUFFER>
         ByteBuffer msgBuffer = ByteBuffer.allocate(1024);
         // Stringa corrispondente alla risposta del server
@@ -489,7 +487,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
         } while (bytesRead >= 1024);
 
         //if(DEBUG) System.out.println("Server@WORTH < "+serverResponse.toString());
-        return serverResponse.toString();
+        return serverResponse.toString().split(":");
     }
 
     @Override
