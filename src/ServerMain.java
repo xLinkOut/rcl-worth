@@ -242,6 +242,18 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
                                     }
                                     break;
 
+                                case "getCardHistory":
+                                    try{
+                                        key.attach("ok:"+getCardHistory(cmd[1],cmd[2],cmd[3]));
+                                    } catch (ForbiddenException e) {
+                                        key.attach("ko:403:You're not member of this project");
+                                    } catch (ProjectNotFoundException e) {
+                                        key.attach("ko:404:Can't found "+cmd[2]+", are you sure that exists? Try createProject to create a project");
+                                    } catch (CardNotFoundException e) {
+                                        key.attach("ko:404:Can't found "+cmd[3]+", are you sure that exists? Try addCard to create a card");
+                                    }
+                                    break;
+
                                 case "listProjects":
                                     try{
                                         key.attach("ok:"+listProjects(cmd[1]));
@@ -249,7 +261,6 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
                                         key.attach("ko:404:You are not a member of any project, yet");
                                     }
                                     break;
-
 
                             }
                         }
@@ -472,7 +483,6 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
 
     private void moveCard(String username, String projectName, String cardName, String from, String to)
             throws ProjectNotFoundException, ForbiddenException, CardNotFoundException, IllegalCardMovementException {
-        // Contro
         // Controllare che il progetto esista
         if(!projects.containsKey(projectName)) throw new ProjectNotFoundException(projectName);
         Project project = projects.get(projectName);
@@ -493,6 +503,21 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
 
     }
 
+    private String getCardHistory(String username, String projectName, String cardName)
+            throws CardNotFoundException, ForbiddenException, ProjectNotFoundException {
+        // Controllare che il progetto esista
+        if(!projects.containsKey(projectName)) throw new ProjectNotFoundException(projectName);
+        Project project = projects.get(projectName);
+
+        // Controllare che l'utente sia un membro del progetto
+        if(!project.getMembers().contains(getUser(username))) throw new ForbiddenException();
+
+        // Controllo che esista la card
+        if(project.getCard(cardName) == null) throw new CardNotFoundException(cardName);
+
+        // Ritorno la history della card
+        return project.getCard(cardName).getHistory();
+    }
     // * UTILS
     // Legge la richiesta inviata dal client
     private String readRequest(SocketChannel client) throws IOException {

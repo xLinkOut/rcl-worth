@@ -281,6 +281,10 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
                                 }
                                 break;
 
+                            case "getCardHistory":
+                                getCardHistory(cmd[1],cmd[2]);
+                                break;
+
                             case "help":
                                 System.out.println(msgHelp);
                                 break;
@@ -504,6 +508,21 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
             //if(DEBUG) System.out.print("["+response[1]+"] ");
             System.out.println(response[2]);
         }
+    }
+
+    private void getCardHistory(String projectName, String cardName) throws IOException {
+        if(projectName.isEmpty()) throw new IllegalArgumentException("projectName");
+        if(cardName.isEmpty()) throw new IllegalArgumentException("cardName");
+        sendRequest("getCardHistory "+username+" "+projectName+" "+cardName);
+        String[] response = readResponse();
+        if(response[0].equals("ok")){
+            System.out.println("The history of the movements of the card "+cardName+" is:");
+            System.out.println("\t"+response[1].substring(0,response[1].length()-1).replaceAll("\\|"," -> "));
+        }else {
+            //if(DEBUG) System.out.print("["+response[1]+"] ");
+            System.out.println(response[2]);
+        }
+
     }
     // * UTILS
     private void sendRequest(String request) throws IOException {
