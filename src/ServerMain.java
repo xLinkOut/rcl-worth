@@ -334,14 +334,17 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
         // Controllo che memberUsername sia effettivamente un utente del sistema
         if(!userExists(memberUsername)) throw new UserNotFoundException(memberUsername);
 
-        Project project = projects.get(projectName);
+        // TODO: controllo che username sia un membro di projectName
 
+        Project project = projects.get(projectName);
+        User user = getUser(memberUsername);
         // Controllo che memberUsername non faccia ancora parte di projectName
-        if(project.getMembers().contains(getUser(memberUsername)))
+        if(project.getMembers().contains(user))
             throw new AlreadyMemberException(memberUsername);
 
         // Aggiungo memberUsername come nuovo membro del progetto projectName
-        project.addMember(getUser(memberUsername));
+        project.addMember(user);
+        user.addProject(project);
 
     }
 
