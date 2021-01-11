@@ -225,6 +225,22 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
                                     } catch (ProjectNotFoundException e) {
                                         key.attach("ko:404:Can't found "+cmd[2]+", are you sure that exists? Try createProject to create a project");
                                     }
+                                    break;
+
+                                case "moveCard":
+                                    try{
+                                        moveCard(cmd[1],cmd[2],cmd[3],cmd[4],cmd[5]);
+                                        key.attach("ok:"+cmd[3]+" moved from "+cmd[4]+" to "+cmd[5]);
+                                    } catch (IllegalCardMovementException e) {
+                                        key.attach("ko:406:You can't move a card from "+cmd[4]+" to "+cmd[5]);
+                                    } catch (ForbiddenException e) {
+                                        key.attach("ko:403:You're not member of this project");
+                                    } catch (CardNotFoundException e) {
+                                        key.attach("ko:404:Can't found "+cmd[3]+", are you sure that exists? Try addCard to create a card");
+                                    } catch (ProjectNotFoundException e) {
+                                        key.attach("ko:404:Can't found "+cmd[2]+", are you sure that exists? Try createProject to create a project");
+                                    }
+                                    break;
 
                                 case "listProjects":
                                     try{
@@ -233,6 +249,8 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
                                         key.attach("ko:404:You are not a member of any project, yet");
                                     }
                                     break;
+
+
                             }
                         }
                         key.interestOps(SelectionKey.OP_WRITE);
@@ -450,6 +468,29 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
                 .map(Card::getName).collect(Collectors.toList()).toString());
         */
         return output.toString();
+    }
+
+    private void moveCard(String username, String projectName, String cardName, String from, String to)
+            throws ProjectNotFoundException, ForbiddenException, CardNotFoundException, IllegalCardMovementException {
+        // Contro
+        // Controllare che il progetto esista
+        if(!projects.containsKey(projectName)) throw new ProjectNotFoundException(projectName);
+        Project project = projects.get(projectName);
+
+        // Controllare che l'utente sia un membro del progetto
+        if(!project.getMembers().contains(getUser(username))) throw new ForbiddenException();
+
+        // Controllo che esista la card
+        if(project.getCard(cardName) == null) throw new CardNotFoundException(cardName);
+
+        // Controllo se from e to sono liste valide
+        // try/catch ? what if different string
+        Project.Section fromSection = Project.Section.valueOf(from.toUpperCase());
+        Project.Section toSection   = Project.Section.valueOf(to.toUpperCase());
+
+        // Sposto la card (il rispetto dei vincoli è assicurato dal metodo invocato
+        project.moveCard(cardName,fromSection,toSection);
+
     }
 
     // * UTILS

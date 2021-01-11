@@ -264,7 +264,21 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
                                 break;
 
                             case "showCards":
-                                showCards(cmd[1]);
+                                try{
+                                    showCards(cmd[1]);
+                                } catch (ArrayIndexOutOfBoundsException e) {
+                                    System.out.println("Something is missing from your request...\n"+
+                                            "Usage: showCards projectName");
+                                }
+                                break;
+
+                            case "moveCard":
+                                try{
+                                    moveCard(cmd[1],cmd[2],cmd[3],cmd[4]);
+                                } catch (ArrayIndexOutOfBoundsException e) {
+                                    System.out.println("Something is missing from your request...\n"+
+                                            "Usage: moveCard projectName cardName from to");
+                                }
                                 break;
 
                             case "help":
@@ -473,6 +487,23 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
             System.out.println(response[2]);
         }
 
+    }
+
+    private void moveCard(String projectName, String cardName, String from, String to)
+            throws IOException {
+        if(projectName.isEmpty()) throw new IllegalArgumentException("projectName");
+        if(cardName.isEmpty()) throw new IllegalArgumentException("cardName");
+        if(from.isEmpty()) throw new IllegalArgumentException("from");
+        if(to.isEmpty()) throw new IllegalArgumentException("to");
+
+        sendRequest("moveCard "+username+" "+projectName+" "+cardName+" "+from+" "+to);
+        String[] response = readResponse();
+        if(response[0].equals("ok")){
+            System.out.println(response[1]);
+        }else {
+            //if(DEBUG) System.out.print("["+response[1]+"] ");
+            System.out.println(response[2]);
+        }
     }
     // * UTILS
     private void sendRequest(String request) throws IOException {

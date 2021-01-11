@@ -1,3 +1,6 @@
+import WorthExceptions.CardNotFoundException;
+import WorthExceptions.IllegalCardMovementException;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -56,7 +59,6 @@ public class Project {
     }
 
     public Card getCard(String name, Section section){
-
         List<Card> list;
         // Enhanced switch in java 13
         switch (section){
@@ -102,23 +104,34 @@ public class Project {
         }
     }
 
-    @SuppressWarnings("ConstantConditions")
-    public void moveCard(String name, Section from, Section destination){
-        // vincoli
-        if(from == Section.TODO && destination != Section.INPROGRESS) return;
-        if(from == Section.INPROGRESS
-                && (destination != Section.TOBEREVISED || destination != Section.DONE)) return;
-        if(from == Section.TOBEREVISED
-                && (destination != Section.INPROGRESS || destination != Section.DONE)) return;
-        if(from == Section.DONE) return;
+    public void moveCard(String name, Section fromSection, Section toSection)
+            throws IllegalCardMovementException, CardNotFoundException {
 
-        Card card = getCard(name, from);
+        // Controllo se from e to rispettano i vincoli di spostamento delle card
+        // * -> *
+        if(fromSection == toSection)
+            throw new IllegalCardMovementException(fromSection.toString(),toSection.toString());
+
+        // * -> TODO
+        if(toSection == Section.TODO)
+            throw new IllegalCardMovementException(fromSection.toString(),toSection.toString());
+
+        // DONE -> *
+        if(fromSection == Section.DONE)
+            throw new IllegalCardMovementException(fromSection.toString(),toSection.toString());
+
+        // TODO -> (TOBEREVISED|DONE)
+        if(fromSection == Section.TODO && toSection != Section.INPROGRESS)
+            throw new IllegalCardMovementException(fromSection.toString(),toSection.toString());
+
+        Card card = getCard(name, fromSection);
         if(card != null){
-            getList(destination).add(card);
-            getList(from).remove(card);
-            // Maybe merge
-            card.setSection(destination);
-            card.addHistory(destination);
-        }
+            // Tolgo la card dalla lista originaria
+            getList(toSection).add(card);
+            // La aggiungo a quella di destinazione
+            getList(fromSection).remove(card);
+            // Aggiorno la lista di appartenenza
+            card.setSection(toSection); // setSection aggiorna anche la history
+        }else throw new CardNotFoundException(name);
     }
 }

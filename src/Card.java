@@ -20,13 +20,16 @@ public class Card {
 
     public Project.Section getSection() { return section; }
 
-    public void setSection(Project.Section section) { this.section = section; }
+    public void setSection(Project.Section section) {
+        this.section = section;
+        addHistory(section);
+    }
 
     public String getHistory() { return history; }
 
     public void setHistory(String history) { this.history += history + "|"; }
 
-    public void addHistory(Project.Section section) {this.history += section.toString() + "|"; }
+    private void addHistory(Project.Section section) {this.history += section.toString() + "|"; }
 
     public String toString(){
         return
