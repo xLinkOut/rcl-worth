@@ -175,7 +175,10 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
                                     System.out.println("Command not recognized or not available as a guest, please login.");
                             }
                         } else { System.out.println(msgHelpGuest); }
-                    }catch (IOException ioe){ioe.printStackTrace();}
+                    }catch (IOException ioe){
+                        System.out.println("WORTH seems to be unreachable... try again in a few moments, apologize for the inconvenience.");
+                        System.exit(-1);
+                    }
                 }
 
                 // * Tutte le altre funzioni
@@ -274,7 +277,10 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
                 } catch (IOException ioe){ioe.printStackTrace();}
             }
 
-        } catch (IOException e) { e.printStackTrace(); }
+        } catch (IOException e) {
+            System.out.println("WORTH seems to be unreachable... try again in a few moments, apologize for the inconvenience.");
+            System.exit(-1);
+        }
     }
 
     private void login(String username, String password)
