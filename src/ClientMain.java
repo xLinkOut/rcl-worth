@@ -248,6 +248,10 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
                                 }
                                 break;
 
+                            case "listProjects":
+                                listProjects();
+                                break;
+
                             case "help":
                                 System.out.println(msgHelp);
                                 break;
@@ -397,6 +401,25 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
         if(response[0].equals("ok")){
             System.out.println("Some information about the "+cardName+" card:");
             System.out.println(response[1]);
+        }else {
+            //if(DEBUG) System.out.print("["+response[1]+"] ");
+            System.out.println(response[2]);
+        }
+    }
+
+    private void listProjects() throws IOException {
+        sendRequest("listProjects "+username);
+        String[] response = readResponse().split(":");
+        if(response[0].equals("ok")){
+            System.out.println("These are the projects you are a member of:");
+            // Parso la lista inviata dal server
+            String[] projectsList = response[1].substring(1,response[1].length()-1).split(" ");
+            for (String s : projectsList) {
+                if (s.charAt(s.length() - 1) == ',')
+                    System.out.println("\t- " + s.substring(0, s.length() - 1));
+                else // Last member
+                    System.out.println("\t- " + s);
+            }
         }else {
             //if(DEBUG) System.out.print("["+response[1]+"] ");
             System.out.println(response[2]);

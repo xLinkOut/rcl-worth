@@ -213,6 +213,15 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
                                     } catch (CardNotFoundException e) {
                                         key.attach("ko:404:Can't found "+cmd[3]+", are you sure that exists? Try addCard to create a card");
                                     }
+                                    break;
+
+                                case "listProjects":
+                                    try{
+                                        key.attach("ok:"+listProjects(cmd[1]));
+                                    } catch (ProjectNotFoundException e) {
+                                        key.attach("ko:404:You are not a member of any project, yet");
+                                    }
+                                    break;
                             }
                         }
 
@@ -308,7 +317,10 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
         if(projects.containsKey(projectName)) throw new ProjectNameAlreadyInUse(projectName);
 
         // Creo un nuovo progetto e lo aggiungo al database
-        projects.put(projectName, new Project(projectName, getUser(username)));
+        User user = getUser(username);
+        Project project = new Project(projectName, user);
+        projects.put(projectName, project);
+        user.addProject(project);
     }
 
     private void addMember(String username, String projectName, String memberUsername)
@@ -382,6 +394,17 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
         Card card = project.getCard(cardName);
         if(card == null) throw new CardNotFoundException(cardName);
         return card.toString();
+    }
+
+    private String listProjects(String username)
+            throws ProjectNotFoundException {
+        if(DEBUG) System.out.println("Server@WORTH > listProjects "+username);
+
+        List<Project> list = getUser(username).getProjects();
+        if(list.size() == 0) throw new ProjectNotFoundException(username);
+        return list.stream()
+                .map(Project::getName)
+                .collect(Collectors.toList()).toString();
     }
 
     // * UTILS
