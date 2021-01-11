@@ -171,12 +171,14 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
                                     try{
                                         addMember(cmd[1],cmd[2],cmd[3]);
                                         key.attach("ok:Member "+cmd[3]+" added to "+cmd[2]+"!");
+                                    } catch (ForbiddenException e) {
+                                        key.attach("ko:403:You're not member of this project");
                                     } catch (ProjectNotFoundException e) {
                                         key.attach("ko:404:Can't found "+cmd[2]+", are you sure that exists? Try createProject to create a project");
                                     } catch (UserNotFoundException e) {
                                         key.attach("ko:404:Can't found an account named "+cmd[3]+"! Maybe is a typo?");
                                     } catch (AlreadyMemberException e) {
-                                        key.attach("ko:409:"+cmd[3]+" is already a member of "+cmd[2]);
+                                        key.attach("ko:409:" + cmd[3] + " is already a member of " + cmd[2]);
                                     }
                                     break;
 
@@ -324,20 +326,21 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
     }
 
     private void addMember(String username, String projectName, String memberUsername)
-            throws ProjectNotFoundException, UserNotFoundException, AlreadyMemberException {
+            throws ProjectNotFoundException, UserNotFoundException, AlreadyMemberException, ForbiddenException {
 
         if(DEBUG) System.out.println("Server@WORTH > addMember "+username+" "+projectName+" "+memberUsername);
 
         // Controllo se esiste un progetto con il nome indicato
         if(!projects.containsKey(projectName)) throw new ProjectNotFoundException(projectName);
-
         // Controllo che memberUsername sia effettivamente un utente del sistema
         if(!userExists(memberUsername)) throw new UserNotFoundException(memberUsername);
 
-        // TODO: controllo che username sia un membro di projectName
-
         Project project = projects.get(projectName);
         User user = getUser(memberUsername);
+
+        // controllo che username sia un membro di projectName
+        if(!project.getMembers().contains(getUser(username))) throw new ForbiddenException();
+
         // Controllo che memberUsername non faccia ancora parte di projectName
         if(project.getMembers().contains(user))
             throw new AlreadyMemberException(memberUsername);
