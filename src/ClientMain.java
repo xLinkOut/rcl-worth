@@ -56,13 +56,22 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
         """;
     private static final String msgHelp =
         """
-        \tcreateProject projectName    | Create a new project named <projectName>
-        \taddMember
-        \tshowMembers
-        \taddCard
-        \tlogout                     | Logout from your WORTH
-        \thelp                       | Show this help;
-        \tquit                       | Close WORTH.
+        \tcreateProject <projectName>                 | Create a new project
+        \taddMember <projectName> <memberUsername>    | Add a new member in a project
+        \taddCard <projectName> <cardName> <cardDesc> | Create and assign a new card to a project
+        \tshowMembers <projectName>                   | Shows the current members of a project
+        \tshowCard <projectName> <cardName>           | Shows information about a card assigned to a project
+        \tshowCards <projectName>                     | Shows all cards assigned to a project 
+        \tmoveCard ---
+        \tgetCardHistory ---
+        \tcancelProject ---
+        \tlistUsers ---
+        \tlistOnlineUsers ---
+        \treadChat ---
+        \tsendChatMsg ---
+        \tlogout                                       | Logout from your WORTH account
+        \thelp                                         | Show this help;
+        \tquit                                         | Close WORTH.
         """;
 
     public ClientMain(){
@@ -168,7 +177,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
                                     break;
                                 case "quit":
                                     socketChannel.close();
-                                    System.out.println("Hope to see you soon," + username + "!");
+                                    System.out.println("Hope to see you soon, " + username + "!");
                                     System.exit(0);
                                     break;
                                 default:
