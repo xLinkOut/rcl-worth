@@ -129,7 +129,7 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
                     else if (key.isReadable()) {
                         SocketChannel client = (SocketChannel) key.channel();
                         // Recupero la richiesta del client
-                        String  request = readRequest(client);
+                        String request = readRequest(client);
                         // Divido il comando e gli eventuali argomenti
                         // (Con la .trim() mi assicuro di eliminare spazi vuoti "inutili"
                         String[] cmd = request.trim().split(" ");
@@ -235,7 +235,6 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
                                     break;
                             }
                         }
-
                         key.interestOps(SelectionKey.OP_WRITE);
                     }
 
@@ -243,8 +242,10 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
                     else if (key.isWritable()) {
                         SocketChannel client = (SocketChannel) key.channel();
                         String msg = (String) key.attachment();
+
                         if (msg == null) {
-                            // Client disconnesso ?
+                            // Client disconnesso
+                            System.out.println(client.getRemoteAddress() + ": TCP Close");
                             key.cancel();
                             key.channel().close();
                         } else {

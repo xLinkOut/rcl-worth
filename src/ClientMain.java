@@ -167,6 +167,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
                                     System.out.println(msgHelpGuest);
                                     break;
                                 case "quit":
+                                    socketChannel.close();
                                     System.out.println("Hope to see you soon," + username + "!");
                                     System.exit(0);
                                     break;
@@ -258,7 +259,11 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
                                 System.out.println(msgHelp);
                                 break;
                             case "quit":
-                                if(logged) logout();
+                                if(logged){
+                                    server.unregisterCallback(notifyStub);
+                                    logout();
+                                }
+                                socketChannel.close();
                                 System.out.println("Hope to see you soon,"+username+"!");
                                 System.exit(0);
                                 break;
@@ -269,8 +274,6 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
                 } catch (IOException ioe){ioe.printStackTrace();}
             }
 
-            // unregisterCallback
-            // socketChannel close
         } catch (IOException e) { e.printStackTrace(); }
     }
 
