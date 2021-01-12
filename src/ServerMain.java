@@ -491,22 +491,17 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
         // Controllare che l'utente sia un membro del progetto
         if(!project.getMembers().contains(getUser(username))) throw new ForbiddenException();
 
+        // Costruisco una stringa contente i nomi di tutte le card
+        // Organizzate come list.toString(), ovvero
+        // [c1,c2]:[c3]:[c4,c5]:[c6]
         StringBuilder output = new StringBuilder();
         for(Project.Section section : Project.Section.values()){
             output.append(project.getList(section).stream()
                     .map(Card::getName).collect(Collectors.toList()).toString()).append(":");
         }
-        /*
-        output.append(project.getList(Project.Section.TODO).stream()
-                .map(Card::getName).collect(Collectors.toList()).toString()).append(":");
-        output.append(project.getList(Project.Section.TODO).stream()
-                .map(Card::getName).collect(Collectors.toList()).toString()).append(":");
-        output.append(project.getList(Project.Section.TODO).stream()
-                .map(Card::getName).collect(Collectors.toList()).toString()).append(":");
-        output.append(project.getList(Project.Section.TODO).stream()
-                .map(Card::getName).collect(Collectors.toList()).toString());
-        */
-        return output.toString();
+
+        // Substring per rimuovere l'ultimo : inserito
+        return output.substring(0,output.length()-1);
     }
 
     private void moveCard(String username, String projectName, String cardName, String from, String to)

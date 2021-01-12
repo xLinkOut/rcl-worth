@@ -16,6 +16,7 @@ import java.rmi.registry.LocateRegistry;
 import java.rmi.server.RemoteObject;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Scanner;
 
@@ -510,31 +511,49 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
         String[] response = readResponse();
         if(response[0].equals("ok")){
             System.out.println("Showcase of "+projectName+":");
+
             // response[1] = TODO
             // response[2] = INPROGRESS
             // response[3] = TOBEREVISED
             // response[4] = DONE
-            // Super ugly
-            List<String> todo = Arrays.asList(response[1].replace("[","").replace("]","").split(", ",-1));
-            List<String> inProgress = Arrays.asList(response[2].replace("[","").replace("]","").split(", ",-1));
-            List<String> toBeRevised = Arrays.asList(response[3].replace("[","").replace("]","").split(", ",-1));
-            List<String> done = Arrays.asList(response[4].replace("[","").replace("]","").split(", ",-1));
-            // Ugly
-            // Fede suggerisce di metterli in un array e fare .max
-            int maxLength = Math.max(todo.size(),Math.max(inProgress.size(),Math.max(toBeRevised.size(),done.size())));
-            System.out.format("%-24s%-24s%-24s%-24s%n","TODO","INPROGRESS","TOBERESIVED","DONE");
+
+            String[] todo        = response[1].substring(1,response[1].length()-1).split(", ");
+            String[] inprogress  = response[2].substring(1,response[2].length()-1).split(", ");
+            String[] toberevised = response[3].substring(1,response[3].length()-1).split(", ");
+            String[] done        = response[4].substring(1,response[4].length()-1).split(", ");
+
+            int maxLength = Math.max(todo.length,Math.max(inprogress.length,Math.max(toberevised.length, done.length)));
+
+            // Table header
+            System.out.format("|          %s         |       %s      |      %s      |          %s         |%n",
+                              "TODO","INPROGRESS","TOBERESIVED","DONE");
+
             for(int i=0;i<maxLength;i++){
-                try{System.out.format("%-24.23s",todo.get(i));}catch(ArrayIndexOutOfBoundsException ignored){};
-                try{System.out.format("%-24.23s",inProgress.get(i));}catch(ArrayIndexOutOfBoundsException ignored){};
-                try{System.out.format("%-24.23s",toBeRevised.get(i));}catch(ArrayIndexOutOfBoundsException ignored){};
-                try{System.out.format("%-24.23s",done.get(i));}catch(ArrayIndexOutOfBoundsException ignored){};
+                // TODO
+                try{ System.out.format("| %-22.21s",todo[i]);}
+                catch (ArrayIndexOutOfBoundsException ignored){System.out.format("|%-23.21s","");}
+
+                // INPROGRESS
+                try{ System.out.format("| %-22.21s",inprogress[i]);}
+                catch (ArrayIndexOutOfBoundsException ignored){System.out.format("|%-23.21s","");}
+
+                // TOBEREVISED
+                try{ System.out.format("| %-22.21s",toberevised[i]);}
+                catch (ArrayIndexOutOfBoundsException ignored){System.out.format("|%-23.21s","");}
+
+                // DONE
+                try{ System.out.format("| %-22.21s|",done[i]);}
+                catch (ArrayIndexOutOfBoundsException ignored){System.out.format("|%-23.21s|","");}
+
+                // NEWLINE
                 System.out.format("%n");
             }
+
+
         }else {
             //if(DEBUG) System.out.print("["+response[1]+"] ");
             System.out.println(response[2]);
         }
-
     }
 
     private void moveCard(String projectName, String cardName, String from, String to)
