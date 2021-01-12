@@ -129,6 +129,8 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
                             switch (cmd[0]) {
                                 case "register":
                                     try {
+                                        // cmd[1] = username, nome utente dell'account che si vuole creare
+                                        // cmd[2] = password, password di accesso scelta per l'account
                                         if(cmd[1].contains(":")) throw new IllegalArgumentException("Colon character (:) not allowed in username");
                                         if(cmd[2].contains(":")) throw new IllegalArgumentException("Colon character (:) not allowed in password");
                                         server.register(cmd[1], cmd[2]);
@@ -156,6 +158,8 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
 
                                 case "login":
                                     try {
+                                        // cmd[1] = username, nome utente del proprio account
+                                        // cmd[2] = password, password del proprio account
                                         login(cmd[1], cmd[2]);
                                     } catch (IllegalArgumentException iae) {
                                         System.out.println("Insert a valid " + iae.getMessage() +
@@ -208,7 +212,9 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
 
                             case "createProject":
                                 try{
-                                    if(cmd[1].contains(":")) throw new IllegalArgumentException("Colon character (:) not allowed in project name");
+                                    // cmd[1] = projectName, nome del progetto
+                                    if(cmd[1].contains(":"))
+                                        throw new IllegalArgumentException("Colon character (:) not allowed in project name");
                                     createProject(cmd[1]);
                                 }catch(ArrayIndexOutOfBoundsException e){
                                     System.out.println("Every project need a name!\n" +
@@ -220,42 +226,55 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
 
                             case "addMember":
                                 try{
+                                    // cmd[1] = projectName, nome del progetto
+                                    // cmd[2] = memberUsername, username dell'utente da inserire
                                     addMember(cmd[1],cmd[2]);
                                 }catch (ArrayIndexOutOfBoundsException e){
                                     System.out.println("Something is missing from your request...\n"+
                                             "Usage: addMember projectName memberUsername");
+                                }catch (IllegalArgumentException iae){
+                                    System.out.println(iae.getMessage());
                                 }
                                 break;
 
                             case "showMembers":
                                 try{
+                                    // cmd[1] = projectName, nome del progetto
                                     showMembers(cmd[1]);
-                                } catch (IllegalArgumentException iae) {
+                                }catch (ArrayIndexOutOfBoundsException e) {
+                                    System.out.println("Something is missing from your request...\n" +
+                                            "Usage: showMembers projectName");
+                                }catch (IllegalArgumentException iae) {
                                     System.out.println(iae.getMessage());
                                 }
                                 break;
 
                             case "addCard":
                                 try {
+                                    // cmd[1] = projectName, nome del progetto
+                                    // cmd[2] = cardName, nome della card
+                                    // cmd[3] = cardDescription, descrizione testuale della card
                                     if (cmd[1].contains(":")) throw new IllegalArgumentException("Colon character (:) not allowed in username\n");
                                     // TODO: Unire la caption su cmd[3]
                                     addCard(cmd[1], cmd[2], cmd[3]);
-                                } catch (IllegalArgumentException iae) {
-                                    System.out.println(iae.getMessage());
-                                } catch (ArrayIndexOutOfBoundsException e){
+                                }catch (ArrayIndexOutOfBoundsException e){
                                     System.out.println("Something is missing from your request...\n"+
                                             "Usage: addCard projectName cardName cardCaption");
+                                }catch (IllegalArgumentException iae) {
+                                    System.out.println(iae.getMessage());
                                 }
                                 break;
 
                             case "showCard":
                                 try{
+                                    // cmd[1] = projectName, nome del progetto
+                                    // cmd[2] = cardName, nome della card
                                     showCard(cmd[1],cmd[2]);
-                                } catch (IllegalArgumentException iae) {
-                                    System.out.println(iae.getMessage());
                                 } catch (ArrayIndexOutOfBoundsException e) {
                                     System.out.println("Something is missing from your request...\n"+
                                             "Usage: showCard projectName cardName");
+                                } catch (IllegalArgumentException iae) {
+                                    System.out.println(iae.getMessage());
                                 }
                                 break;
 
@@ -265,24 +284,42 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
 
                             case "showCards":
                                 try{
+                                    // cmd[1] = projectName, nome del progetto
                                     showCards(cmd[1]);
                                 } catch (ArrayIndexOutOfBoundsException e) {
                                     System.out.println("Something is missing from your request...\n"+
                                             "Usage: showCards projectName");
+                                } catch (IllegalArgumentException iae) {
+                                    System.out.println(iae.getMessage());
                                 }
                                 break;
 
                             case "moveCard":
                                 try{
+                                    // cmd[1] = projectName, nome del progetto
+                                    // cmd[2] = cardName, nome della card
+                                    // cmd[3] = from, lista dove si trova attualmente la card
+                                    // cmd[4] = to, lista in cui si desidera spostare la card
                                     moveCard(cmd[1],cmd[2],cmd[3],cmd[4]);
                                 } catch (ArrayIndexOutOfBoundsException e) {
                                     System.out.println("Something is missing from your request...\n"+
                                             "Usage: moveCard projectName cardName from to");
+                                } catch (IllegalArgumentException iae) {
+                                    System.out.println(iae.getMessage());
                                 }
                                 break;
 
                             case "getCardHistory":
-                                getCardHistory(cmd[1],cmd[2]);
+                                try{
+                                    // cmd[1] = projectName, nome del progetto
+                                    // cmd[2] = cardName, nome della card
+                                    getCardHistory(cmd[1],cmd[2]);
+                                } catch (ArrayIndexOutOfBoundsException e) {
+                                    System.out.println("Something is missing from your request...\n" +
+                                            "Usage: getCardHistory projectName cardName");
+                                } catch(IllegalArgumentException iae){
+                                    System.out.println(iae.getMessage());
+                                }
                                 break;
 
                             case "help":

@@ -139,6 +139,8 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
 
                                 case "login":
                                     try {
+                                        // cmd[1] = username, nome utente del proprio account
+                                        // cmd[2] = password, password del proprio account
                                         login(cmd[1], cmd[2]);
                                         key.attach("ok:Great! Now your are logged as "+cmd[1]+"!");
                                     } catch (AuthFailException e) {
@@ -150,6 +152,7 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
 
                                 case "logout":
                                     try{
+                                        // cmd[1] = username, nome utente del proprio account
                                         logout(cmd[1]);
                                         key.attach("ok:You have been logged out successfully");
                                     } catch (UserNotFoundException e) {
@@ -160,6 +163,8 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
 
                                 case "createProject":
                                     try{
+                                        // cmd[1] = username, nome utente del proprio account
+                                        // cmd[2] = projectName, nome del progetto
                                         createProject(cmd[1],cmd[2]);
                                         key.attach("ok:Project "+cmd[2]+" created!\nCurrently you're the only member. Try use addMember to invite some coworkers");
                                     } catch (ProjectNameAlreadyInUse e) {
@@ -169,6 +174,9 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
 
                                 case "addMember":
                                     try{
+                                        // cmd[1] = username, nome utente del proprio account
+                                        // cmd[2] = projectName, nome del progetto
+                                        // cmd[3] = memberUsername, username dell'utente da inserire
                                         addMember(cmd[1],cmd[2],cmd[3]);
                                         key.attach("ok:Member "+cmd[3]+" added to "+cmd[2]+"!");
                                     } catch (ForbiddenException e) {
@@ -184,6 +192,8 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
 
                                 case "showMembers":
                                     try{
+                                        // cmd[1] = username, nome utente del proprio account
+                                        // cmd[2] = projectName, nome del progetto
                                         key.attach("ok:"+showMembers(cmd[1], cmd[2]));
                                     } catch (ForbiddenException e) {
                                         key.attach("ko:403:You're not member of this project");
@@ -194,6 +204,10 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
 
                                 case "addCard":
                                     try{
+                                        // cmd[1] = username, nome utente del proprio account
+                                        // cmd[2] = projectName, nome del progetto
+                                        // cmd[3] = cardName, nome della card
+                                        // cmd[4] = cardDescription, descrizione testuale della card
                                         addCard(cmd[1],cmd[2],cmd[3],cmd[4]);
                                         key.attach("ok:Card "+cmd[3]+" created");
                                     } catch (ForbiddenException e) {
@@ -207,6 +221,9 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
 
                                 case "showCard":
                                     try{
+                                        // cmd[1] = username, nome utente del proprio account
+                                        // cmd[2] = projectName, nome del progetto
+                                        // cmd[3] = cardName, nome della card
                                         key.attach("ok:"+showCard(cmd[1],cmd[2],cmd[3]));
                                     } catch (ForbiddenException e) {
                                         key.attach("ko:403:You're not member of this project");
@@ -219,6 +236,8 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
 
                                 case "showCards":
                                     try{
+                                        // cmd[1] = username, nome utente del proprio account
+                                        // cmd[2] = projectName, nome del progetto
                                         key.attach("ok:"+showCards(cmd[1],cmd[2]));
                                     } catch (ForbiddenException e) {
                                         key.attach("ko:403:You're not member of this project");
@@ -229,6 +248,11 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
 
                                 case "moveCard":
                                     try{
+                                        // cmd[1] = username, nome utente del proprio account
+                                        // cmd[2] = projectName, nome del progetto
+                                        // cmd[3] = cardName, nome della card
+                                        // cmd[4] = from, lista dove si trova attualmente la card
+                                        // cmd[5] = to, lista in cui si desidera spostare la card
                                         moveCard(cmd[1],cmd[2],cmd[3],cmd[4],cmd[5]);
                                         key.attach("ok:"+cmd[3]+" moved from "+cmd[4]+" to "+cmd[5]);
                                     } catch (IllegalCardMovementException e) {
@@ -244,6 +268,9 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
 
                                 case "getCardHistory":
                                     try{
+                                        // cmd[1] = username, nome utente del proprio account
+                                        // cmd[2] = projectName, nome del progetto
+                                        // cmd[3] = cardName, nome della card
                                         key.attach("ok:"+getCardHistory(cmd[1],cmd[2],cmd[3]));
                                     } catch (ForbiddenException e) {
                                         key.attach("ko:403:You're not member of this project");
@@ -256,6 +283,7 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
 
                                 case "listProjects":
                                     try{
+                                        // cmd[1] = username, nome utente del proprio account
                                         key.attach("ok:"+listProjects(cmd[1]));
                                     } catch (ProjectNotFoundException e) {
                                         key.attach("ko:404:You are not a member of any project, yet");
