@@ -15,6 +15,7 @@ import java.nio.channels.SocketChannel;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.server.RemoteObject;
 import java.rmi.server.UnicastRemoteObject;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Scanner;
 
@@ -509,20 +510,26 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
         String[] response = readResponse();
         if(response[0].equals("ok")){
             System.out.println("Showcase of "+projectName+":");
-            System.out.println(response[1]);
-            // TODO: implement after moveCard
-            /*
-            //String[] projectsList = response[1].substring(1,response[1].length()-1).split(" ");
-            //System.out.format("%32s%10d%16s", string1, int1, string2);
-            // Devo ciclare per per la stringa più lunga
-
-            // Parso la lista inviata dal server
-            for (String s : projectsList) {
-                if (s.charAt(s.length() - 1) == ',')
-                    System.out.println("\t- " + s.substring(0, s.length() - 1));
-                else // Last member
-                    System.out.println("\t- " + s);
-            }*/
+            // response[1] = TODO
+            // response[2] = INPROGRESS
+            // response[3] = TOBEREVISED
+            // response[4] = DONE
+            // Super ugly
+            List<String> todo = Arrays.asList(response[1].replace("[","").replace("]","").split(", ",-1));
+            List<String> inProgress = Arrays.asList(response[2].replace("[","").replace("]","").split(", ",-1));
+            List<String> toBeRevised = Arrays.asList(response[3].replace("[","").replace("]","").split(", ",-1));
+            List<String> done = Arrays.asList(response[4].replace("[","").replace("]","").split(", ",-1));
+            // Ugly
+            // Fede suggerisce di metterli in un array e fare .max
+            int maxLength = Math.max(todo.size(),Math.max(inProgress.size(),Math.max(toBeRevised.size(),done.size())));
+            System.out.format("%-24s%-24s%-24s%-24s%n","TODO","INPROGRESS","TOBERESIVED","DONE");
+            for(int i=0;i<maxLength;i++){
+                try{System.out.format("%-24.23s",todo.get(i));}catch(ArrayIndexOutOfBoundsException ignored){};
+                try{System.out.format("%-24.23s",inProgress.get(i));}catch(ArrayIndexOutOfBoundsException ignored){};
+                try{System.out.format("%-24.23s",toBeRevised.get(i));}catch(ArrayIndexOutOfBoundsException ignored){};
+                try{System.out.format("%-24.23s",done.get(i));}catch(ArrayIndexOutOfBoundsException ignored){};
+                System.out.format("%n");
+            }
         }else {
             //if(DEBUG) System.out.print("["+response[1]+"] ");
             System.out.println(response[2]);
