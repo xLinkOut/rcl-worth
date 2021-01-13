@@ -325,6 +325,18 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
                                 }
                                 break;
 
+                            case "cancelProject":
+                                try{
+                                    // cmd[1] = projectName, nome del progetto
+                                    cancelProject(cmd[1]);
+                                } catch (ArrayIndexOutOfBoundsException e) {
+                                    System.out.println("Something is missing from your request...\n" +
+                                            "Usage: cancelProject projectName");
+                                } catch(IllegalArgumentException iae){
+                                System.out.println(iae.getMessage());
+                            }
+                            break;
+
                             case "help":
                                 System.out.println(msgHelp);
                                 break;
@@ -596,6 +608,20 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
         }
 
     }
+
+    private void cancelProject(String projectName)
+            throws IOException,IllegalArgumentException {
+        if(projectName.isEmpty()) throw new IllegalArgumentException("projectName");
+        sendRequest("cancelProject "+username+" "+projectName);
+        String[] response = readResponse();
+        if(response[0].equals("ok")){
+            System.out.println(response[1]);
+        }else {
+            //if(DEBUG) System.out.print("["+response[1]+"] ");
+            System.out.println(response[2]);
+        }
+    }
+
     // * UTILS
     private void sendRequest(String request) throws IOException {
         socketChannel.write(ByteBuffer.wrap((request).getBytes(StandardCharsets.UTF_8)));

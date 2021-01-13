@@ -94,6 +94,7 @@ public class Project {
                 && toBeRevised.isEmpty() && !done.isEmpty();
     }
 
+    // TODO CAMBIARE
     public List<Card> getList(Section section){
         switch (section){
             case TODO: return todo;
@@ -134,4 +135,13 @@ public class Project {
             card.setSection(toSection); // setSection aggiorna anche la history
         }else throw new CardNotFoundException(name);
     }
+
+    public boolean canDelete(){
+        return todo.isEmpty()
+                && inProgress.isEmpty()
+                && toBeRevised.isEmpty();
+    }
+
+
+
 }

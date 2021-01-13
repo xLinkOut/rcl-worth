@@ -290,6 +290,18 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
                                     }
                                     break;
 
+                                case "cancelProject":
+                                    try{
+                                        cancelProject(cmd[1],cmd[2]);
+                                        key.attach("ok:Project "+cmd[2]+" was canceled");
+                                    } catch (ForbiddenException e) {
+                                        key.attach("ko:403:You're not member of this project");
+                                    } catch (PendingCardsException e) {
+                                        key.attach("ko:412:Not all cards are in the done list. There is still work to be done!");
+                                    } catch (ProjectNotFoundException e) {
+                                        key.attach("ko:404:Can't found "+cmd[2]+", are you sure that exists? Try createProject to create a project");
+                                    }
+
                             }
                         }
                         key.interestOps(SelectionKey.OP_WRITE);
@@ -541,6 +553,24 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
         // Ritorno la history della card
         return project.getCard(cardName).getHistory();
     }
+
+    private void cancelProject(String username, String projectName)
+            throws ProjectNotFoundException, ForbiddenException, PendingCardsException {
+        // Controllare che il progetto esista
+        if(!projects.containsKey(projectName)) throw new ProjectNotFoundException(projectName);
+        Project project = projects.get(projectName);
+
+        // Controllare che l'utente sia un membro del progetto
+        if(!project.getMembers().contains(getUser(username))) throw new ForbiddenException();
+
+        // Controllo che tutte le cards siano nella lista DONE
+        if(project.canDelete()){
+            // Chiedere conferma?
+            getUser(username).removeProject(project);
+            projects.remove(projectName);
+        }else throw new PendingCardsException();
+    }
+
     // * UTILS
     // Legge la richiesta inviata dal client
     private String readRequest(SocketChannel client) throws IOException {

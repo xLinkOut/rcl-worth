@@ -37,5 +37,5 @@ public class User {
     public List<Project> getProjects(){
         return this.projects;
     }
-
+    public void removeProject(Project project) {this.projects.remove(project);}
 }
