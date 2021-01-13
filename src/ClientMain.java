@@ -287,7 +287,8 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
                             case "showCards":
                                 try{
                                     // cmd[1] = projectName, nome del progetto
-                                    showCards(cmd[1]);
+                                    // table  = true if the user wants a table version of the cards
+                                    showCards(cmd[1], cmd.length == 3);
                                 } catch (ArrayIndexOutOfBoundsException e) {
                                     System.out.println("Something is missing from your request...\n"+
                                             "Usage: showCards projectName");
@@ -503,7 +504,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
         }
     }
 
-    private void showCards(String projectName)
+    private void showCards(String projectName, boolean table)
             throws IOException, IllegalArgumentException {
         // Controllo validità dei parametri
         if(projectName.isEmpty()) throw new IllegalArgumentException("projectName");
@@ -522,33 +523,41 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
             String[] toberevised = response[3].substring(1,response[3].length()-1).split(", ");
             String[] done        = response[4].substring(1,response[4].length()-1).split(", ");
 
-            int maxLength = Math.max(todo.length,Math.max(inprogress.length,Math.max(toberevised.length, done.length)));
+            if(table){
+                // Table header
+                System.out.format("|          %s         |       %s      |      %s      |          %s         |%n",
+                                  "TODO","INPROGRESS","TOBERESIVED","DONE");
+                int maxLength = Math.max(todo.length,Math.max(inprogress.length,Math.max(toberevised.length, done.length)));
+                for(int i=0;i<maxLength;i++){
+                    // TODO
+                    try{ System.out.format("| %-22.21s",todo[i]);}
+                    catch (ArrayIndexOutOfBoundsException ignored){System.out.format("|%-23.21s","");}
 
-            // Table header
-            System.out.format("|          %s         |       %s      |      %s      |          %s         |%n",
-                              "TODO","INPROGRESS","TOBERESIVED","DONE");
+                    // INPROGRESS
+                    try{ System.out.format("| %-22.21s",inprogress[i]);}
+                    catch (ArrayIndexOutOfBoundsException ignored){System.out.format("|%-23.21s","");}
 
-            for(int i=0;i<maxLength;i++){
-                // TODO
-                try{ System.out.format("| %-22.21s",todo[i]);}
-                catch (ArrayIndexOutOfBoundsException ignored){System.out.format("|%-23.21s","");}
+                    // TOBEREVISED
+                    try{ System.out.format("| %-22.21s",toberevised[i]);}
+                    catch (ArrayIndexOutOfBoundsException ignored){System.out.format("|%-23.21s","");}
 
-                // INPROGRESS
-                try{ System.out.format("| %-22.21s",inprogress[i]);}
-                catch (ArrayIndexOutOfBoundsException ignored){System.out.format("|%-23.21s","");}
+                    // DONE
+                    try{ System.out.format("| %-22.21s|",done[i]);}
+                    catch (ArrayIndexOutOfBoundsException ignored){System.out.format("|%-23.21s|","");}
 
-                // TOBEREVISED
-                try{ System.out.format("| %-22.21s",toberevised[i]);}
-                catch (ArrayIndexOutOfBoundsException ignored){System.out.format("|%-23.21s","");}
-
-                // DONE
-                try{ System.out.format("| %-22.21s|",done[i]);}
-                catch (ArrayIndexOutOfBoundsException ignored){System.out.format("|%-23.21s|","");}
-
-                // NEWLINE
-                System.out.format("%n");
+                    // NEWLINE
+                    System.out.format("%n");
+                }
+            }else{
+                System.out.println("TODO:");
+                for(String todoCard : todo) System.out.println("\t> "+todoCard);
+                System.out.println("INPROGRESS:");
+                for(String inProgressCard : inprogress) System.out.println("\t> "+inProgressCard);
+                System.out.println("TOBEREVISED:");
+                for(String toBeRevisedCard : toberevised) System.out.println("\t> "+toBeRevisedCard);
+                System.out.println("DONE:");
+                for(String doneCard : done) System.out.println("\t> "+doneCard);
             }
-
 
         }else {
             //if(DEBUG) System.out.print("["+response[1]+"] ");
