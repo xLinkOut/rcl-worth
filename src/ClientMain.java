@@ -388,21 +388,23 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
             // preparo il necessario per utilizzare la chat
             for(int i=2;i<response.length;i++){
                 // response[i] = [projectName,multicastIP,multicastPort] (i>=2)
-                String[] projectData = response[i].substring(1,response[i].length()-1).split(", ");
+                String[] projectData = response[i].substring(1,response[i].length()-1).split(",");
                 // projectData[0] = projectName
                 // projectData[1] = multicastIP
                 // projectData[2] = multicastPort
 
-                // Creo il "buffer" della chat e lo aggiungo alla map <chats>
-                ConcurrentLinkedQueue<String> messageBuffer = chats.put(projectData[0], new ConcurrentLinkedQueue<>());
+                // Creo il "buffer" della chat
+                ConcurrentLinkedQueue<String> messageBuffer = new ConcurrentLinkedQueue<>();
+                // e lo aggiungo alla map <chats>
+                chats.put(projectData[0], messageBuffer);
                 // Creo un nuovo thread chatListener inizializzato con i valori del progetto corrente (ip,port,buffer)
-                Thread chatListener = new Thread(
-                        new ChatListener(projectData[1],Integer.parseInt(projectData[2]),messageBuffer)
-                );
+                ChatListener chatListener = new ChatListener(projectData[1],Integer.parseInt(projectData[2]),messageBuffer);
+                // Creo il thread corrispondente
+                Thread chatListenerThread = new Thread(chatListener);
                 // Lo aggiungo alla lista di threads listener
-                chatListeners.add(chatListener);
+                chatListeners.add(chatListenerThread);
                 // Avvio il thread listener
-                chatListener.start();
+                chatListenerThread.start();
             }
 
             System.out.println(response[1]);

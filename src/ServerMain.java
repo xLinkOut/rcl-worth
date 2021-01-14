@@ -141,8 +141,7 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
                                     try {
                                         // cmd[1] = username, nome utente del proprio account
                                         // cmd[2] = password, password del proprio account
-                                        login(cmd[1], cmd[2]);
-                                        key.attach("ok:Great! Now your are logged as "+cmd[1]+"!");
+                                        key.attach("ok:Great! Now your are logged as "+cmd[1]+"!:"+login(cmd[1], cmd[2]));
                                     } catch (AuthFailException e) {
                                         key.attach("ko:401:The password you entered is incorrect, please try again");
                                     } catch (UserNotFoundException e) {
@@ -349,23 +348,36 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
     }
 
     // Permette ad un utente di utilizzare il sistema
-    private void login(String username, String password)
+    private String login(String username, String password)
             throws UserNotFoundException, AuthFailException {
         if(DEBUG) System.out.println("Server@WORTH > login "+username+" "+password);
 
         // Controllo l'esistenza dell'utente
         if(!userExists(username)) throw new UserNotFoundException(username);
 
+        // Recupero le informazioni dell'utente
+        User user = getUser(username);
+
         // Controllo se la password è corretta
-        if(!getUser(username).auth(password)) throw new AuthFailException(password);
+        if(!user.auth(password)) throw new AuthFailException(password);
 
         // Aggiorno il suo stato su Online
-        getUser(username).setStatus(User.Status.ONLINE);
+        user.setStatus(User.Status.ONLINE);
         getPublicUser(username).setStatus(User.Status.ONLINE);
 
         // Aggiorno tutti gli altri clients con una callback
         try { sendCallbacks(); }
         catch (RemoteException e) { e.printStackTrace(); }
+
+        // Ritorno le informazioni Multicast su tutti i
+        // (eventuali) progetti di cui l'utente è membro
+        List<Project> userProjects = user.getProjects();
+        // Se l'utente non è membro di nessun progetto, ritorno una stringa vuota
+        if(userProjects.isEmpty()) return "";
+        StringBuilder output = new StringBuilder();
+        for(Project project : userProjects) output.append(project.getMulticastInfo());
+        return output.toString();
+
     }
 
     // Utente abbandona correttamente il sistema
@@ -399,7 +411,8 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
 
         // Creo un nuovo progetto e lo aggiungo al database
         User user = getUser(username);
-        Project project = new Project(projectName, user);
+        // TODO: multicast <ip,port> generator
+        Project project = new Project(projectName, user, "239.255.1.3",6969);
         projects.put(projectName, project);
         user.addProject(project);
     }
