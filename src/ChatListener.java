@@ -1,3 +1,8 @@
+import java.io.IOException;
+import java.net.DatagramPacket;
+import java.net.InetAddress;
+import java.net.MulticastSocket;
+import java.net.UnknownHostException;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class ChatListener implements Runnable{
@@ -14,13 +19,55 @@ public class ChatListener implements Runnable{
 
     @Override
     public void run() {
-        for(int i=0;i<10;i++){
-            messageBuffer.add(String.valueOf(System.currentTimeMillis()));
-            try {
-                Thread.sleep(1000);
-            } catch (InterruptedException e) {
+        // Dichiaro fuori dal try/catch tutto il necessario
+        InetAddress inetAddress;
+        MulticastSocket multicastSocket = null;
+        DatagramPacket packet = null;
+        try {
+            inetAddress = InetAddress.getByName(multicastIP);
+            multicastSocket = new MulticastSocket(multicastPort);
+            multicastSocket.joinGroup(inetAddress);
+            packet = new DatagramPacket(new byte[8192],8192);
+        } catch (UnknownHostException e) {
+            // Controllo errori
+            e.printStackTrace();
+        } catch (IOException e) {
+            // Controllo errori
+            e.printStackTrace();
+        }
+
+        while(true) { // while not interrupted
+            // Facciamo l'IDE contento
+            assert multicastSocket != null;
+            assert packet != null;
+            try{
+                multicastSocket.receive(packet);
+                messageBuffer.add(new String(packet.getData(),0,packet.getLength()));
+            } catch (IOException e) {
                 e.printStackTrace();
             }
         }
+
+        /*
+        // Rimuovo il multicastSocket dal gruppo
+        try {
+            multicastSocket.leaveGroup(inetAddress);
+        } catch (IOException e) { e.printStackTrace(); }
+
+        // Chiudo il socket
+        multicastSocket.close();
+         */
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
