@@ -36,6 +36,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
     private static final Gson gson = new Gson();
     private static Map<String, ConcurrentLinkedQueue<String>> chats;
     private static List<Thread> chatListeners;
+    private static DatagramSocket multicastSocket;
 
 
     // * MESSAGES
@@ -83,6 +84,12 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
         // Chats
         this.chats = new HashMap<>();
         this.chatListeners = new LinkedList<>();
+        try {
+            this.multicastSocket = new DatagramSocket();
+        } catch (SocketException e) {
+            e.printStackTrace();
+            System.exit(-1);
+        }
     }
 
     private void run(){
@@ -358,13 +365,15 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
 
                             case "sendChatMsg":
                                 try{
-                                    // TODO: concat 2+
-                                    sendChatMsg(cmd[1],cmd[2]);
+                                    // cmd[1] = projectName, nome del progetto
+                                    // cmd[2] ... cmd[n] = testo del messaggio da inviare
+                                    // (viene "ricostruito" in una stringa essendo cmd un array)
+                                    sendChatMsg(cmd[1],String.join(" ",Arrays.copyOfRange(cmd,2,cmd.length)));
                                 } catch (ProjectNotFoundException e) {
-                                    e.printStackTrace();
+                                    System.out.println("Can't found "+cmd[1]+", are you sure that exists? Try createProject to create a project");
                                 } catch (ArrayIndexOutOfBoundsException e) {
                                     System.out.println("Something is missing from your request...\n" +
-                                            "Usage: readChat projectName");
+                                            "Usage: sendChatMsg projectName message");
                                 } catch(IllegalArgumentException iae){
                                     System.out.println(iae.getMessage());
                                 }
@@ -699,13 +708,14 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
         if(projectName.isEmpty()) throw new IllegalArgumentException("projectName");
         if(message.isEmpty()) throw new IllegalArgumentException("message");
         if(!chats.containsKey(projectName)) throw new ProjectNotFoundException(projectName);
+
+        // (HH:MM) username: message
+        String formattedMessage = getTime()+" "+username+": "+message;
         try {
-            DatagramSocket multicastSocket = new DatagramSocket();
-            multicastSocket.send(new DatagramPacket("Luca Ciao".getBytes(StandardCharsets.UTF_8),9,
-                    InetAddress.getByName("239.255.1.3"),6969));
+            multicastSocket.send(new DatagramPacket(
+                    formattedMessage.getBytes(StandardCharsets.UTF_8), formattedMessage.length(),
+                    InetAddress.getByName("239.255.1.3"), 6969));
             System.out.println("Sent");
-        } catch (SocketException e) {
-            e.printStackTrace();
         } catch (UnknownHostException e) {
             e.printStackTrace();
         } catch (IOException e) {
@@ -746,6 +756,12 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
 
         //if(DEBUG) System.out.println("Server@WORTH < "+serverResponse.toString());
         return serverResponse.toString().split(":");
+    }
+
+    private String getTime(){
+        Calendar now = Calendar.getInstance();
+        return String.format("(%02d:%02d)",
+                now.get(Calendar.HOUR_OF_DAY), now.get(Calendar.MINUTE));
     }
 
     @Override
