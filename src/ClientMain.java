@@ -15,10 +15,8 @@ import java.nio.channels.SocketChannel;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.server.RemoteObject;
 import java.rmi.server.UnicastRemoteObject;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Scanner;
+import java.util.*;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class ClientMain extends RemoteObject implements NotifyEventInterface {
     // * TCP
@@ -35,6 +33,8 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
     private static String username = "Guest";
     private static List publicUsers;
     private static final Gson gson = new Gson();
+    private static Map<String, ConcurrentLinkedQueue<String>> chats;
+    private static List<Thread> chatListeners;
 
 
     // * MESSAGES
@@ -78,6 +78,10 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
 
     public ClientMain(){
         super(); // Callback
+
+        // Chats
+        this.chats = new HashMap<>();
+        this.chatListeners = new LinkedList<>();
     }
 
     private void run(){
@@ -379,6 +383,28 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
             ClientMain.username = username;
             // Registro il client per la ricezione delle callback
             server.registerCallback(notifyStub);
+
+            // Se l'utente è membro di almeno un progetto,
+            // preparo il necessario per utilizzare la chat
+            for(int i=2;i<response.length;i++){
+                // response[i] = [projectName,multicastIP,multicastPort] (i>=2)
+                String[] projectData = response[i].substring(1,response[i].length()-1).split(", ");
+                // projectData[0] = projectName
+                // projectData[1] = multicastIP
+                // projectData[2] = multicastPort
+
+                // Creo il "buffer" della chat e lo aggiungo alla map <chats>
+                ConcurrentLinkedQueue<String> messageBuffer = chats.put(projectData[0], new ConcurrentLinkedQueue<>());
+                // Creo un nuovo thread chatListener inizializzato con i valori del progetto corrente (ip,port,buffer)
+                Thread chatListener = new Thread(
+                        new ChatListener(projectData[1],Integer.parseInt(projectData[2]),messageBuffer)
+                );
+                // Lo aggiungo alla lista di threads listener
+                chatListeners.add(chatListener);
+                // Avvio il thread listener
+                chatListener.start();
+            }
+
             System.out.println(response[1]);
         }else {
             // Stampo il codice dell'operazione soltanto se sono in modalità debug
