@@ -424,11 +424,11 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
                 // projectData[2] = multicastPort
 
                 // Creo il "buffer" della chat
-                ConcurrentLinkedQueue<String> messageBuffer = new ConcurrentLinkedQueue<>();
+                ConcurrentLinkedQueue<String> messagesQueue = new ConcurrentLinkedQueue<>();
                 // e lo aggiungo alla map <chats>
-                chats.put(projectData[0], messageBuffer);
+                chats.put(projectData[0], messagesQueue);
                 // Creo un nuovo thread chatListener inizializzato con i valori del progetto corrente (ip,port,buffer)
-                ChatListener chatListener = new ChatListener(projectData[1],Integer.parseInt(projectData[2]),messageBuffer);
+                ChatListener chatListener = new ChatListener(projectData[1],Integer.parseInt(projectData[2]),messagesQueue);
                 // Creo il thread corrispondente
                 Thread chatListenerThread = new Thread(chatListener);
                 // Lo aggiungo alla lista di threads listener
@@ -685,13 +685,13 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
         if(projectName.isEmpty()) throw new IllegalArgumentException("projectName");
 
         if(!chats.containsKey(projectName)) throw new ProjectNotFoundException(projectName);
-        ConcurrentLinkedQueue<String> messageQueue = chats.get(projectName);
+        ConcurrentLinkedQueue<String> messagesQueue = chats.get(projectName);
 
-        if(messageQueue.size() == 0)
+        if(messagesQueue.size() == 0)
             System.out.println("No new message on this chat");
         else
-            while(!messageQueue.isEmpty())
-                System.out.println(messageQueue.poll());
+            while(!messagesQueue.isEmpty())
+                System.out.println(messagesQueue.poll());
     }
 
     private void sendChatMsg(String projectName, String message)

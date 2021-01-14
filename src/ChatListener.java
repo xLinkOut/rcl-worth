@@ -9,12 +9,12 @@ public class ChatListener implements Runnable{
 
     private final String multicastIP;
     private final int multicastPort;
-    private final ConcurrentLinkedQueue<String> messageBuffer;
+    private final ConcurrentLinkedQueue<String> messagesQueue;
 
-    public ChatListener(String multicastIP, int multicastPort, ConcurrentLinkedQueue<String> messageBuffer) {
+    public ChatListener(String multicastIP, int multicastPort, ConcurrentLinkedQueue<String> messagesQueue) {
         this.multicastIP = multicastIP;
         this.multicastPort = multicastPort;
-        this.messageBuffer = messageBuffer;
+        this.messagesQueue = messagesQueue;
     }
 
     @Override
@@ -42,7 +42,7 @@ public class ChatListener implements Runnable{
             assert packet != null;
             try{
                 multicastSocket.receive(packet);
-                messageBuffer.add(new String(packet.getData(),0,packet.getLength()));
+                messagesQueue.add(new String(packet.getData(),0,packet.getLength()));
             } catch (IOException e) {
                 e.printStackTrace();
             }
