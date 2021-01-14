@@ -1,11 +1,12 @@
 // @author Luca Cirillo (545480)
 
+import WorthExceptions.ProjectNotFoundException;
 import WorthExceptions.UsernameAlreadyTakenException;
 import com.google.gson.Gson;
+import jdk.jfr.MetadataDefinition;
 
 import java.io.IOException;
-import java.net.ConnectException;
-import java.net.InetSocketAddress;
+import java.net.*;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.rmi.NotBoundException;
@@ -337,9 +338,38 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
                                     System.out.println("Something is missing from your request...\n" +
                                             "Usage: cancelProject projectName");
                                 } catch(IllegalArgumentException iae){
-                                System.out.println(iae.getMessage());
-                            }
-                            break;
+                                    System.out.println(iae.getMessage());
+                                }
+                                break;
+
+                            case "readChat":
+                                try{
+                                    // cmd[1] = projectName, nome del progetto
+                                    readChat(cmd[1]);
+                                } catch (ProjectNotFoundException e) {
+                                    System.out.println("Can't found "+cmd[1]+", are you sure that exists? Try createProject to create a project");
+                                } catch (ArrayIndexOutOfBoundsException e) {
+                                    System.out.println("Something is missing from your request...\n" +
+                                            "Usage: readChat projectName");
+                                } catch(IllegalArgumentException iae){
+                                    System.out.println(iae.getMessage());
+                                }
+                                break;
+
+                            case "sendChatMsg":
+                                try{
+                                    // TODO: concat 2+
+                                    sendChatMsg(cmd[1],cmd[2]);
+                                } catch (ProjectNotFoundException e) {
+                                    e.printStackTrace();
+                                } catch (ArrayIndexOutOfBoundsException e) {
+                                    System.out.println("Something is missing from your request...\n" +
+                                            "Usage: readChat projectName");
+                                } catch(IllegalArgumentException iae){
+                                    System.out.println(iae.getMessage());
+                                }
+                                break;
+
 
                             case "help":
                                 System.out.println(msgHelp);
@@ -648,6 +678,39 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
             //if(DEBUG) System.out.print("["+response[1]+"] ");
             System.out.println(response[2]);
         }
+    }
+
+    private void readChat(String projectName) throws ProjectNotFoundException {
+        if(projectName.isEmpty()) throw new IllegalArgumentException("projectName");
+        if(!chats.containsKey(projectName)) throw new ProjectNotFoundException(projectName);
+        ConcurrentLinkedQueue<String> messageQueue = chats.get(projectName);
+        if(messageQueue.size() == 0){
+            System.out.println("No new message on this chat");
+        }else{
+            for(String message : messageQueue){
+                System.out.println(message);
+            }
+        }
+    }
+
+    private void sendChatMsg(String projectName, String message)
+            throws ProjectNotFoundException {
+        if(projectName.isEmpty()) throw new IllegalArgumentException("projectName");
+        if(message.isEmpty()) throw new IllegalArgumentException("message");
+        if(!chats.containsKey(projectName)) throw new ProjectNotFoundException(projectName);
+        try {
+            DatagramSocket multicastSocket = new DatagramSocket();
+            multicastSocket.send(new DatagramPacket("Luca Ciao".getBytes(StandardCharsets.UTF_8),9,
+                    InetAddress.getByName("239.255.1.3"),6969));
+            System.out.println("Sent");
+        } catch (SocketException e) {
+            e.printStackTrace();
+        } catch (UnknownHostException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
     }
 
     // * UTILS
