@@ -680,17 +680,18 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
         }
     }
 
-    private void readChat(String projectName) throws ProjectNotFoundException {
+    private void readChat(String projectName)
+            throws ProjectNotFoundException {
         if(projectName.isEmpty()) throw new IllegalArgumentException("projectName");
+
         if(!chats.containsKey(projectName)) throw new ProjectNotFoundException(projectName);
         ConcurrentLinkedQueue<String> messageQueue = chats.get(projectName);
-        if(messageQueue.size() == 0){
+
+        if(messageQueue.size() == 0)
             System.out.println("No new message on this chat");
-        }else{
-            for(String message : messageQueue){
-                System.out.println(message);
-            }
-        }
+        else
+            while(!messageQueue.isEmpty())
+                System.out.println(messageQueue.poll());
     }
 
     private void sendChatMsg(String projectName, String message)
