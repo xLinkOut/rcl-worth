@@ -10,12 +10,16 @@ public class Project {
 
     private final String name;
     private final List<User> members;
+
     private final List<Card> todo;
     private final List<Card> inProgress;
     private final List<Card> toBeRevised;
     private final List<Card> done;
 
-    public Project(String name, User owner){
+    private final String multicastIP;
+    private final int multicastPort;
+
+    public Project(String name, User owner, String multicastIP, int multicastPort){
         this.name = name;
         this.members = new ArrayList<>();
         this.todo = new ArrayList<>();
@@ -23,6 +27,8 @@ public class Project {
         this.toBeRevised = new ArrayList<>();
         this.done = new ArrayList<>();
         this.members.add(owner);
+        this.multicastIP = multicastIP;
+        this.multicastPort = multicastPort;
     }
 
     public String getName() { return name; }
@@ -140,6 +146,11 @@ public class Project {
         return todo.isEmpty()
                 && inProgress.isEmpty()
                 && toBeRevised.isEmpty();
+    }
+
+    public String getMulticastInfo(){
+        // [projectName,multicastIP,multicastPort]
+        return "["+this.name+","+this.multicastIP+","+this.multicastPort+"]";
     }
 
 
