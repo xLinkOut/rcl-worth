@@ -1,13 +1,17 @@
 // @author Luca Cirillo (545480)
 
 import WorthExceptions.*;
-import com.google.gson.Gson;
+import com.google.gson.*;
 
 import java.io.IOException;
+import java.net.MulticastSocket;
 import java.net.ServerSocket;
 import java.nio.ByteBuffer;
 import java.nio.channels.*;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.rmi.RemoteException;
 import java.net.InetSocketAddress;
 import java.rmi.registry.Registry;
@@ -34,12 +38,20 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
     private final List<NotifyEventInterface> clients;
     private final Map<String, Project> projects;
     private static final Gson gson = new Gson();
+    // * PATHS
+    private static final Path pathMulticast = Paths.get("Multicast.json");
 
     public ServerMain(){
         // Callback
         super();
         clients = new ArrayList<>();
+        /*
+        {
+    "lastMulticastIP": "224.0.0.1",
+    "releasedIP": []
+}
 
+         */
         // Persistenza
         this.users = new ArrayList<>();
         this.publicUsers = new ArrayList<>();
@@ -403,7 +415,7 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
 
     // Utente richiede la creazione di un nuovo progetto
     private String createProject(String username, String projectName)
-            throws ProjectNameAlreadyInUse {
+            throws ProjectNameAlreadyInUse, IOException { // TODO usare un altra eccezione per il multicast error
 
         if(DEBUG) System.out.println("Server@WORTH > createProject "+username+" "+projectName);
 
@@ -412,10 +424,11 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
 
         // Creo un nuovo progetto e lo aggiungo al database
         User user = getUser(username);
-        // TODO: multicast <ip,port> generator
-        Project project = new Project(projectName, user, "239.255.1.3",6969);
+        Project project = new Project(projectName, user, genMulticastIP(),22704);
         projects.put(projectName, project);
         user.addProject(project);
+        // Ritorno le informazioni multicast da passare all'utente
+        // affinchè possa utilizzare la chat di progetto
         return project.getMulticastInfo();
     }
 
@@ -638,6 +651,36 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
         return null;
     }
 
+    @SuppressWarnings("ReadWriteStringCanBeUsed")
+    private String genMulticastIP() throws IOException {
+        String multicastIP = "";
+        // Carico in memoria il file Multicast.json
+        String multicast = new String(Files.readAllBytes(pathMulticast));
+        // Parso la stringa JSON con Gson
+        JsonObject multicastJson = new JsonParser().parse(multicast).getAsJsonObject();
+        System.out.println(multicastJson.get("lastMulticastIP"));
+        // Se sono disponibili IP liberati da progetti cancellati
+        JsonArray releasedIP = (JsonArray) multicastJson.get("releasedIP");
+        if(releasedIP.size() != 0){
+            // Prendo il più vecchio IP che si è liberato (il primo della lista)
+            multicastIP = releasedIP.get(0).toString();
+            // Lo rimuovo dalla lista
+            releasedIP.remove(0);
+            // La rimetto nel JSON
+            multicastJson.add("releasedIP",releasedIP);
+        }else{
+            // Altrimenti, genero un nuovo IP incrementale
+            // Prendo l'ultimo IP utilizzato
+            String lastMulticastIP = multicastJson.get("lastMulticastIP").getAsString();
+            // Lo parso e lo incremento
+            multicastJson.add("lastMulticastIP", JsonParser.parseString(multicastIP));
+        }
+
+        // Salvo tutto nuovamente su file, prima di ritornare l'IP
+        Files.write(pathMulticast,multicastJson.toString().getBytes(StandardCharsets.UTF_8));
+        if(DEBUG) System.out.println(multicastJson.toString());
+        return multicastIP;
+    }
     // * CALLBACKS
     @Override
     public synchronized void registerCallback(NotifyEventInterface clientInterface)
@@ -661,6 +704,11 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
     // * MAIN
     public static void main(String[] args){
         ServerMain server = new ServerMain();
+        try {
+            server.genMulticastIP();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
         server.live();
     }
 }
