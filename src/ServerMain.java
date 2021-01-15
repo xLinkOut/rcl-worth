@@ -164,8 +164,9 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
                                     try{
                                         // cmd[1] = username, nome utente del proprio account
                                         // cmd[2] = projectName, nome del progetto
-                                        createProject(cmd[1],cmd[2]);
-                                        key.attach("ok:Project "+cmd[2]+" created!\nCurrently you're the only member. Try use addMember to invite some coworkers");
+                                        key.attach("ok:Project "+cmd[2]+" created!\nCurrently you're the only member. " +
+                                                "Try use addMember to invite some coworkers:"
+                                                +createProject(cmd[1],cmd[2]));
                                     } catch (ProjectNameAlreadyInUse e) {
                                         key.attach("ko:409:The name chosen for the project is already in use, try another one!");
                                     }
@@ -401,7 +402,7 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
     }
 
     // Utente richiede la creazione di un nuovo progetto
-    private void createProject(String username, String projectName)
+    private String createProject(String username, String projectName)
             throws ProjectNameAlreadyInUse {
 
         if(DEBUG) System.out.println("Server@WORTH > createProject "+username+" "+projectName);
@@ -415,6 +416,7 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
         Project project = new Project(projectName, user, "239.255.1.3",6969);
         projects.put(projectName, project);
         user.addProject(project);
+        return project.getMulticastInfo();
     }
 
     private void addMember(String username, String projectName, String memberUsername)
@@ -433,13 +435,16 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
         // controllo che username sia un membro di projectName
         if(!project.getMembers().contains(getUser(username))) throw new ForbiddenException();
 
-        // Controllo che memberUsername non faccia ancora parte di projectName
+        // Controllo che memberUsername non faccia già parte di projectName
         if(project.getMembers().contains(user))
             throw new AlreadyMemberException(memberUsername);
 
         // Aggiungo memberUsername come nuovo membro del progetto projectName
         project.addMember(user);
         user.addProject(project);
+
+        // TODO: inviare una callback all'utente aggiunto per trasmettere
+        // i dati multicast relativi al progetto
 
     }
 
