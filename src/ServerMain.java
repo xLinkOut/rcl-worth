@@ -35,7 +35,8 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
     private final boolean DEBUG = true;
     private final List<User> users;
     private final List<PublicUser> publicUsers;
-    private final List<NotifyEventInterface> clients;
+    //private final List<NotifyEventInterface> clients;
+    private final Map<String, NotifyEventInterface> clients;
     private final Map<String, Project> projects;
     private static final Gson gson = new Gson();
     // * PATHS
@@ -44,10 +45,10 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
     public ServerMain(){
         // Callback
         super();
-        clients = new ArrayList<>();
+        clients = new LinkedHashMap<>();
         // Multicast
         String defaultMulticast = """
-            {"lastMulticastIP":"244.0.0.1","releasedIP":[]}
+            {"lastMulticastIP":"224.0.0.1","releasedIP":[]}
         """;
         if(!Files.exists(pathMulticast)){
             try {
@@ -206,6 +207,8 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
                                         key.attach("ko:404:Can't found an account named "+cmd[3]+"! Maybe is a typo?");
                                     } catch (AlreadyMemberException e) {
                                         key.attach("ko:409:" + cmd[3] + " is already a member of " + cmd[2]);
+                                    } catch (RemoteException e){
+                                        key.attach("ko:500:Project created, but failed to update local chat information. Please login and logout again to properly user project chat!");
                                     }
                                     break;
 
@@ -435,12 +438,12 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
         projects.put(projectName, project);
         user.addProject(project);
         // Ritorno le informazioni multicast da passare all'utente
-        // affinchè possa utilizzare la chat di progetto
+        // affinché possa utilizzare la chat di progetto
         return project.getMulticastInfo();
     }
 
     private void addMember(String username, String projectName, String memberUsername)
-            throws ProjectNotFoundException, UserNotFoundException, AlreadyMemberException, ForbiddenException {
+            throws ProjectNotFoundException, UserNotFoundException, AlreadyMemberException, ForbiddenException, RemoteException {
 
         if(DEBUG) System.out.println("Server@WORTH > addMember "+username+" "+projectName+" "+memberUsername);
 
@@ -463,6 +466,7 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
         project.addMember(user);
         user.addProject(project);
 
+        clients.get(memberUsername).notifyProject(project.getMulticastInfo());
         // TODO: inviare una callback all'utente aggiunto per trasmettere
         // i dati multicast relativi al progetto
 
@@ -741,32 +745,29 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
     }
     // * CALLBACKS
     @Override
-    public synchronized void registerCallback(NotifyEventInterface clientInterface)
+    public synchronized void registerCallback(String username, NotifyEventInterface clientInterface)
             throws RemoteException {
-        if(!clients.contains(clientInterface)) {
-            clients.add(clientInterface);
-            clientInterface.notifyEvent(publicUsers);
+        if(!clients.containsKey(username)) {
+            clients.put(username,clientInterface);
+            // TODO: inviare la lista di utenti con il loro stato
+            //clientInterface.notifyEvent(publicUsers);
         }
     }
 
     @Override
-    public synchronized void unregisterCallback(NotifyEventInterface clientInterface) throws RemoteException {
-        clients.remove(clientInterface);
+    public synchronized void unregisterCallback(String username, NotifyEventInterface clientInterface) throws RemoteException {
+        clients.remove(username, clientInterface);
     }
 
     public synchronized void sendCallbacks() throws RemoteException{
-        for (NotifyEventInterface client : clients)
-            client.notifyEvent(publicUsers);
+        // TODO: fix
+        //for (NotifyEventInterface client : clients)
+        //    client.notifyEvent(publicUsers);
     }
 
     // * MAIN
     public static void main(String[] args){
         ServerMain server = new ServerMain();
-        try {
-            server.genMulticastIP();
-        } catch (MulticastException e) {
-            e.printStackTrace();
-        }
         server.live();
     }
 }

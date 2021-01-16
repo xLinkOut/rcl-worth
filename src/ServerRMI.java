@@ -10,9 +10,9 @@ public interface ServerRMI extends Remote {
     void register(String username, String password)
             throws RemoteException, UsernameAlreadyTakenException;
 
-    void registerCallback(NotifyEventInterface clientInterface)
+    void registerCallback(String username, NotifyEventInterface clientInterface)
         throws RemoteException;
 
-    void unregisterCallback(NotifyEventInterface clientInterface)
+    void unregisterCallback(String username, NotifyEventInterface clientInterface)
         throws RemoteException;
 }

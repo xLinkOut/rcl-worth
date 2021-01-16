@@ -37,7 +37,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
     private static Map<String, ConcurrentLinkedQueue<String>> chats;
     private static List<Thread> chatListeners;
     private static DatagramSocket multicastSocket;
-
+    
 
     // * MESSAGES
     private static final String msgStartup =
@@ -385,7 +385,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
                                 break;
                             case "quit":
                                 if(logged){
-                                    server.unregisterCallback(notifyStub);
+                                    server.unregisterCallback(username,notifyStub);
                                     logout();
                                 }
                                 socketChannel.close();
@@ -421,7 +421,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
             logged = true;
             ClientMain.username = username;
             // Registro il client per la ricezione delle callback
-            server.registerCallback(notifyStub);
+            server.registerCallback(username, notifyStub);
 
             // Se l'utente è membro di almeno un progetto,
             // preparo il necessario per utilizzare la chat
@@ -464,7 +464,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
             logged = false;
             username = "Guest";
             // Disiscrivo il client dalla ricezione delle callbacks
-            server.unregisterCallback(notifyStub);
+            server.unregisterCallback(username, notifyStub);
             System.out.println(response[1]);
         }else {
             //if(DEBUG) System.out.print("["+response[1]+"] ");
@@ -782,6 +782,33 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
         Calendar now = Calendar.getInstance();
         return String.format("(%02d:%02d)",
                 now.get(Calendar.HOUR_OF_DAY), now.get(Calendar.MINUTE));
+    }
+
+    @Override
+    public void notifyProject(String multicastInfo) throws RemoteException {
+        // L'utente è stato aggiunto ad un nuovo progetto e deve
+        // sincronizzare le proprie informazioni multicast per
+        // partecipare alla chat di progetto
+
+        // Aggiorno le informazioni di multicast del progetto appena creato
+        // response[2] = [projectName,multicastIP,multicastPort]
+        // projectData[0] = projectName
+        // projectData[1] = multicastIP
+        // projectData[2] = multicastPort
+        String[] projectData = multicastInfo.substring(1,multicastInfo.length()-1).split(",");
+        // Creo il "buffer" della chat
+        ConcurrentLinkedQueue<String> messagesQueue = new ConcurrentLinkedQueue<>();
+        // e lo aggiungo alla map <chats>
+        chats.put(projectData[0], messagesQueue);
+        // Creo un nuovo thread chatListener inizializzato con i valori del progetto corrente (ip,port,buffer)
+        ChatListener chatListener = new ChatListener(projectData[1],Integer.parseInt(projectData[2]),messagesQueue);
+        // Creo il thread corrispondente
+        Thread chatListenerThread = new Thread(chatListener);
+        // Lo aggiungo alla lista di threads listener
+        chatListeners.add(chatListenerThread);
+        // Avvio il thread listener
+        chatListenerThread.start();
+        System.out.println("Aggiunto ad un nuovo progetto"+projectData[0]);
     }
 
     @Override
