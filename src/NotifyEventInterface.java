@@ -4,7 +4,7 @@ import java.util.List;
 
 public interface NotifyEventInterface extends Remote {
 
-    void notifyProject(String multicastInfo)
+    void notifyProject(String multicastInfo, String fromWho)
             throws RemoteException;
 
     void notifyEvent(List PublicUsers)

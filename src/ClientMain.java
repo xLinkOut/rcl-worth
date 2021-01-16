@@ -390,7 +390,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
                                     logout();
                                 }
                                 socketChannel.close();
-                                System.out.println("Hope to see you soon,"+username+"!");
+                                System.out.println("Hope to see you soon, "+username+"!");
                                 System.exit(0);
                                 break;
                             default:
@@ -793,7 +793,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
     }
 
     @Override
-    public void notifyProject(String multicastInfo) throws RemoteException {
+    public void notifyProject(String multicastInfo, String fromWho) throws RemoteException {
         // L'utente è stato aggiunto ad un nuovo progetto e deve
         // sincronizzare le proprie informazioni multicast per
         // partecipare alla chat di progetto
@@ -820,7 +820,10 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
         // poter successivamente inviare messaggi sulla chat senza interrogare il server
         projectMulticastIP.put(projectData[0],chatListener);
 
-        System.out.println("\nAggiunto ad un nuovo progetto"+projectData[0]);
+        // Notifico l'utente e ripristino la shell
+        System.out.println("\nDing! Sei stato aggiunto al progetto "+projectData[0]+ " da "+fromWho);
+        System.out.print(username+"@WORTH > ");
+
     }
 
     @Override

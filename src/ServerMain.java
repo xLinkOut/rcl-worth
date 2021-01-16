@@ -467,7 +467,7 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
         project.addMember(user);
         user.addProject(project);
 
-        clients.get(memberUsername).notifyProject(project.getMulticastInfo());
+        clients.get(memberUsername).notifyProject(project.getMulticastInfo(), username);
         // TODO: inviare una callback all'utente aggiunto per trasmettere
         // i dati multicast relativi al progetto
 
