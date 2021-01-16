@@ -37,7 +37,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
     private static Map<String, ConcurrentLinkedQueue<String>> chats;
     private static List<Thread> chatListeners;
     private static DatagramSocket multicastSocket;
-    
+    private static Map<String, String> projectMulticastIP;
 
     // * MESSAGES
     private static final String msgStartup =
@@ -84,6 +84,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
         // Chats
         this.chats = new HashMap<>();
         this.chatListeners = new LinkedList<>();
+        this.projectMulticastIP = new LinkedHashMap<>();
         try {
             this.multicastSocket = new DatagramSocket();
         } catch (SocketException e) {
@@ -444,6 +445,9 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
                 chatListeners.add(chatListenerThread);
                 // Avvio il thread listener
                 chatListenerThread.start();
+                // Salvo inoltre un riferimento all'IP per il progetto projectName per
+                // poter successivamente inviare messaggi sulla chat senza interrogare il server
+                projectMulticastIP.put(projectData[0],projectData[1]);
             }
             // Stampo un messaggio di conferma
             System.out.println(response[1]);
@@ -500,6 +504,9 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
             chatListeners.add(chatListenerThread);
             // Avvio il thread listener
             chatListenerThread.start();
+            // Salvo inoltre un riferimento all'IP per il progetto projectName per
+            // poter successivamente inviare messaggi sulla chat senza interrogare il server
+            projectMulticastIP.put(projectData[0],projectData[1]);
 
             // Stampo un messaggio di conferma
             System.out.println(response[1]);
@@ -734,8 +741,8 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
         try {
             multicastSocket.send(new DatagramPacket(
                     formattedMessage.getBytes(StandardCharsets.UTF_8), formattedMessage.length(),
-                    InetAddress.getByName("239.255.1.3"), 6969));
-            System.out.println("Sent");
+                    InetAddress.getByName(projectMulticastIP.get(projectName)), 22704));
+            System.out.println("Message sent!");
         } catch (UnknownHostException e) {
             e.printStackTrace();
         } catch (IOException e) {
@@ -808,7 +815,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
         chatListeners.add(chatListenerThread);
         // Avvio il thread listener
         chatListenerThread.start();
-        System.out.println("Aggiunto ad un nuovo progetto"+projectData[0]);
+        System.out.println("\nAggiunto ad un nuovo progetto"+projectData[0]);
     }
 
     @Override
