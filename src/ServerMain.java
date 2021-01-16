@@ -181,6 +181,8 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
                                                 +createProject(cmd[1],cmd[2]));
                                     } catch (ProjectNameAlreadyInUse e) {
                                         key.attach("ko:409:The name chosen for the project is already in use, try another one!");
+                                    } catch (MulticastException e) {
+                                        e.printStackTrace();
                                     }
                                     break;
 
@@ -415,7 +417,7 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
 
     // Utente richiede la creazione di un nuovo progetto
     private String createProject(String username, String projectName)
-            throws ProjectNameAlreadyInUse, IOException { // TODO usare un altra eccezione per il multicast error
+            throws ProjectNameAlreadyInUse, MulticastException, IOException { // TODO usare un altra eccezione per il multicast error
 
         if(DEBUG) System.out.println("Server@WORTH > createProject "+username+" "+projectName);
 
@@ -652,32 +654,64 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
     }
 
     @SuppressWarnings("ReadWriteStringCanBeUsed")
-    private String genMulticastIP() throws IOException {
+    private String genMulticastIP() throws MulticastException {
+        // 224.0.0.1 -> 239.255.255.255
         String multicastIP = "";
         // Carico in memoria il file Multicast.json
-        String multicast = new String(Files.readAllBytes(pathMulticast));
+        String multicast = null;
+        try { multicast = new String(Files.readAllBytes(pathMulticast));
+        } catch (IOException e) { throw new MulticastException(); }
         // Parso la stringa JSON con Gson
         JsonObject multicastJson = new JsonParser().parse(multicast).getAsJsonObject();
-        System.out.println(multicastJson.get("lastMulticastIP"));
         // Se sono disponibili IP liberati da progetti cancellati
         JsonArray releasedIP = (JsonArray) multicastJson.get("releasedIP");
-        if(releasedIP.size() != 0){
+        if(releasedIP.size() > 0){
             // Prendo il più vecchio IP che si è liberato (il primo della lista)
             multicastIP = releasedIP.get(0).toString();
             // Lo rimuovo dalla lista
             releasedIP.remove(0);
-            // La rimetto nel JSON
+            // Rimetto la lista aggiornata nel JSON
             multicastJson.add("releasedIP",releasedIP);
-        }else{
+        }else {
             // Altrimenti, genero un nuovo IP incrementale
-            // Prendo l'ultimo IP utilizzato
-            String lastMulticastIP = multicastJson.get("lastMulticastIP").getAsString();
-            // Lo parso e lo incremento
+            // Leggo l'ultimo IP utilizzato dal JSON come una stringa
+            String sLastMulticastIP = multicastJson.get("lastMulticastIP").getAsString();
+            // Controllo che non sia arrivato all'ultimo IP disponibile (239.255.255.255)
+            // Nel caso, faccio un hard reset riportandolo al primo
+            if (sLastMulticastIP.equals("239.255.255.255")) {
+                multicastIP = "224.0.0.1";
+            } else {
+                // Divido gli ottetti separati dal punto (.)
+                // e li casto da String a int
+                int[] lastMulticastIP = Arrays.stream(
+                        sLastMulticastIP.split("\\."))
+                        .mapToInt(Integer::parseInt).toArray();
+                // Li parso e li incremento
+                for (int i = 3; i >= 0; i--) {
+                    // I 3 byte meno significativi hanno limite massimo 255
+                    if (i > 0) {
+                        if (lastMulticastIP[i] < 255) {
+                            lastMulticastIP[i]++;
+                            break;
+                        }
+                    } else {
+                        // Il byte più significativo invece 239
+                        if (lastMulticastIP[i] < 239) lastMulticastIP[i]++;
+                    }
+                }
+                // Riporto gli ottetti da int a String, in notazione decimale puntata
+                multicastIP = Arrays.stream(lastMulticastIP)
+                        .mapToObj(String::valueOf)
+                        .collect(Collectors.joining("."));
+            }
+            // Aggiungo l'IP appena generato al file
+            System.out.println(multicastIP);
             multicastJson.add("lastMulticastIP", JsonParser.parseString(multicastIP));
         }
-
         // Salvo tutto nuovamente su file, prima di ritornare l'IP
-        Files.write(pathMulticast,multicastJson.toString().getBytes(StandardCharsets.UTF_8));
+        try { Files.write(pathMulticast,multicastJson.toString().getBytes(StandardCharsets.UTF_8));
+        } catch (IOException e) { throw new MulticastException(); }
+
         if(DEBUG) System.out.println(multicastJson.toString());
         return multicastIP;
     }
@@ -706,7 +740,7 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
         ServerMain server = new ServerMain();
         try {
             server.genMulticastIP();
-        } catch (IOException e) {
+        } catch (MulticastException e) {
             e.printStackTrace();
         }
         server.live();
