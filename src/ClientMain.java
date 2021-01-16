@@ -36,7 +36,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
     private static final Gson gson = new Gson();
     private static Map<String, ConcurrentLinkedQueue<String>> chats;
     private static Map<String, ChatListener> projectMulticastIP;
-    private static List<Thread> chatListeners;
+    private static Map<String, Thread> chatListeners;
     private static DatagramSocket multicastSocket;
 
     // * MESSAGES
@@ -83,7 +83,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
 
         // Chats
         this.chats = new HashMap<>();
-        this.chatListeners = new LinkedList<>();
+        this.chatListeners = new LinkedHashMap<>();
         this.projectMulticastIP = new LinkedHashMap<>();
         try {
             this.multicastSocket = new DatagramSocket();
@@ -442,7 +442,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
                 // Creo il thread corrispondente
                 Thread chatListenerThread = new Thread(chatListener);
                 // Lo aggiungo alla lista di threads listener
-                chatListeners.add(chatListenerThread);
+                chatListeners.put(projectData[0], chatListenerThread);
                 // Avvio il thread listener
                 chatListenerThread.start();
                 // Salvo inoltre un riferimento all'IP per il progetto projectName per
@@ -501,7 +501,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
             // Creo il thread corrispondente
             Thread chatListenerThread = new Thread(chatListener);
             // Lo aggiungo alla lista di threads listener
-            chatListeners.add(chatListenerThread);
+            chatListeners.put(projectData[0],chatListenerThread);
             // Avvio il thread listener
             chatListenerThread.start();
             // Salvo inoltre un riferimento all'IP per il progetto projectName per
@@ -709,7 +709,19 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
         sendRequest("cancelProject "+username+" "+projectName);
         String[] response = readResponse();
         if(response[0].equals("ok")){
+            // Fermo il thread che sta in ascolto sulla chat di questo progetto
+            Thread chatListener = chatListeners.get(projectName);
+            chatListener.interrupt();
+            // Rimuovo dalle liste locali tutti i riferimenti al progetto appena cancellato
+            // La coda in cui sono immagazzinati i messaggi
+            chats.remove(projectName);
+            // Il task listener che si occupava di accodare i messaggi
+            chatListeners.remove(projectName);
+            // Il thread in ascolto sulla chat
+            projectMulticastIP.remove(projectName);
+            // Infine, stampo un messaggio di conferma
             System.out.println(response[1]);
+
         }else {
             //if(DEBUG) System.out.print("["+response[1]+"] ");
             System.out.println(response[2]);
@@ -813,7 +825,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
         // Creo il thread corrispondente
         Thread chatListenerThread = new Thread(chatListener);
         // Lo aggiungo alla lista di threads listener
-        chatListeners.add(chatListenerThread);
+        chatListeners.put(projectData[0],chatListenerThread);
         // Avvio il thread listener
         chatListenerThread.start();
         // Salvo inoltre un riferimento all'IP per il progetto projectName per

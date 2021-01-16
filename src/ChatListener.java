@@ -46,6 +46,7 @@ public class ChatListener implements Runnable{
             multicastSocket.joinGroup(inetAddress);
             packet = new DatagramPacket(new byte[8192],8192);
         } catch (IOException e) {
+            e.printStackTrace();
            System.out.println("Qualcosa è andato storto mentre provavo a raggiungere la chat di progetto...");
         }
 
