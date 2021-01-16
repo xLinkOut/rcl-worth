@@ -199,7 +199,7 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
                                         // cmd[2] = projectName, nome del progetto
                                         // cmd[3] = memberUsername, username dell'utente da inserire
                                         addMember(cmd[1],cmd[2],cmd[3]);
-                                        key.attach("ok:Member "+cmd[3]+" added to "+cmd[2]+"!");
+                                        key.attach("ok:"+cmd[3]+" added to "+cmd[2]+"!");
                                     } catch (ForbiddenException e) {
                                         key.attach("ko:403:You're not member of this project");
                                     } catch (ProjectNotFoundException e) {
@@ -696,7 +696,8 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
         JsonArray releasedIP = (JsonArray) multicastJson.get("releasedIP");
         if(releasedIP.size() > 0){
             // Prendo il più vecchio IP che si è liberato (il primo della lista)
-            multicastIP = releasedIP.get(0).toString();
+            multicastIP = releasedIP.get(0).toString().replace("\"","");
+            System.out.println(multicastIP);
             // Lo rimuovo dalla lista
             releasedIP.remove(0);
             // Rimetto la lista aggiornata nel JSON
