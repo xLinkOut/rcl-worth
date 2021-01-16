@@ -39,6 +39,7 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
     private final Map<String, NotifyEventInterface> clients;
     private final Map<String, Project> projects;
     private static final Gson gson = new Gson();
+    Random random = new Random();
     // * PATHS
     private static final Path pathMulticast = Paths.get("Multicast.json");
 
@@ -434,7 +435,7 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
 
         // Creo un nuovo progetto e lo aggiungo al database
         User user = getUser(username);
-        Project project = new Project(projectName, user, genMulticastIP(),22704);
+        Project project = new Project(projectName, user, genMulticastIP(),1025+random.nextInt(64510));
         projects.put(projectName, project);
         user.addProject(project);
         // Ritorno le informazioni multicast da passare all'utente
