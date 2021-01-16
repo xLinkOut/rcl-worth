@@ -23,6 +23,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
+@SuppressWarnings("ReadWriteStringCanBeUsed")
 public class ServerMain extends RemoteObject implements Server, ServerRMI{
 
     // * TCP
@@ -44,13 +45,18 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
         // Callback
         super();
         clients = new ArrayList<>();
-        /*
-        {
-    "lastMulticastIP": "224.0.0.1",
-    "releasedIP": []
-}
+        // Multicast
+        String defaultMulticast = """
+            {"lastMulticastIP":"244.0.0.1","releasedIP":[]}
+        """;
+        if(!Files.exists(pathMulticast)){
+            try {
+                Files.write(pathMulticast,defaultMulticast.getBytes(StandardCharsets.UTF_8));
+            } catch (IOException e) {
+                System.err.println("Failed to create default Multicast config file!");
+                System.exit(-1); }
+        }
 
-         */
         // Persistenza
         this.users = new ArrayList<>();
         this.publicUsers = new ArrayList<>();
@@ -416,7 +422,7 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
 
     // Utente richiede la creazione di un nuovo progetto
     private String createProject(String username, String projectName)
-            throws ProjectNameAlreadyInUse, MulticastException, IOException { // TODO usare un altra eccezione per il multicast error
+            throws ProjectNameAlreadyInUse, MulticastException { // TODO usare un altra eccezione per il multicast error
 
         if(DEBUG) System.out.println("Server@WORTH > createProject "+username+" "+projectName);
 
