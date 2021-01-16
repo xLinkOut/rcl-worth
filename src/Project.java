@@ -153,6 +153,10 @@ public class Project {
         return "["+this.name+","+this.multicastIP+","+this.multicastPort+"]";
     }
 
+    public String getMulticastIP(){
+        return this.multicastIP;
+    }
+
 
 
 }

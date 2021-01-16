@@ -23,7 +23,6 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
-@SuppressWarnings("ConstantConditions")
 public class ServerMain extends RemoteObject implements Server, ServerRMI{
 
     // * TCP
@@ -598,12 +597,32 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
 
         // Controllo che tutte le cards siano nella lista DONE
         if(project.canDelete()){
-            // Chiedere conferma?
+            // Salvo l'IP del progetto per essere riutilizzato
+            try{ saveReleasedIP(project.getMulticastIP());
+            } catch (MulticastException ignored) {}
+            // Rimuovo il progetto dalla lista personale dell'utente
             getUser(username).removeProject(project);
+            // Rimuovo il progetto dalla lista globale
             projects.remove(projectName);
         }else throw new PendingCardsException();
     }
-
+    private void saveReleasedIP(String IP) throws MulticastException {
+        // Carico in memoria il file Multicast.json
+        String multicast = null;
+        try { multicast = new String(Files.readAllBytes(pathMulticast));
+        } catch (IOException e) { throw new MulticastException(); }
+        // Parso la stringa JSON con Gson
+        JsonObject multicastJson = new JsonParser().parse(multicast).getAsJsonObject();
+        // "Seleziono" la lista degli IP che si sono liberati
+        JsonArray releasedIP = (JsonArray) multicastJson.get("releasedIP");
+        // Aggiungo il nuovo IP appena rilasciato da un progetto
+        releasedIP.add(IP);
+        // Rimetto la lista nel JSON
+        multicastJson.add("releasedIP",releasedIP);
+        // Salvo tutto nuovamente su file
+        try { Files.write(pathMulticast,multicastJson.toString().getBytes(StandardCharsets.UTF_8));
+        } catch (IOException e) { throw new MulticastException(); }
+    }
     // * UTILS
     // Legge la richiesta inviata dal client
     private String readRequest(SocketChannel client) throws IOException {
@@ -653,7 +672,6 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
         return null;
     }
 
-    @SuppressWarnings("ReadWriteStringCanBeUsed")
     private String genMulticastIP() throws MulticastException {
         // 224.0.0.1 -> 239.255.255.255
         String multicastIP = "";
