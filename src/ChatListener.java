@@ -58,6 +58,9 @@ public class ChatListener implements Runnable{
         multicastSocket.close();
          */
     }
+
+    public String getMulticastIP(){return this.multicastIP;}
+    public int getMulticastPort(){return this.multicastPort;}
 }
 
 
