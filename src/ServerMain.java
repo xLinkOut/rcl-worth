@@ -788,8 +788,13 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
         // Lista di stringhe che riporta lo stato di ogni utente del sistema
         List<String> usersStatus = new LinkedList<>();
         for(User user : users)
-            // username:ONLINE oppure username:OFFLINE
-            usersStatus.add(user.getUsername()+":"+user.getStatus().toString());
+            // ONLINE:username oppure OFFLINE:username
+            // Mettere prima lo stato invece l'utente permette, lato client,
+            // di evitare l'utilizzo del metodo .split(":") ma agire invece
+            // attraverso il metodo .substring(), e non allocare inutilmente
+            // in memoria arrays (anche se di piccole dimensioni) per ogni utente.
+            // Si mantiene l'utilizzo dei due punti per maggiore leggibilità in fase di debug
+            usersStatus.add(user.getStatus().toString()+":"+user.getUsername());
 
         if(DEBUG) System.out.println(usersStatus.toString());
 

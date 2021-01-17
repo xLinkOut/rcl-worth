@@ -492,16 +492,16 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
         for(String user : usersStatus)
             if(user.contains("OFFLINE"))
                 // Usare substring invece di split se metto prima lo status?
-                System.out.println("○ "+user.split(":")[0]);
+                System.out.println("○ "+user.substring(8));
             else
-                System.out.println("● "+user.split(":")[0]);
+                System.out.println("● "+user.substring(7));
     }
 
     private void listOnlineUsers(){
         // ● == ONLINE
         for(String user : usersStatus)
             if(user.contains("ONLINE"))
-                System.out.println("● "+user.split(":")[0]);
+                System.out.println("● "+user.substring(7));
     }
 
     private void createProject(String projectName)
