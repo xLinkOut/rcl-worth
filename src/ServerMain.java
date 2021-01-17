@@ -32,8 +32,6 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
     // * SERVER
     private final boolean DEBUG = true;
     private final List<User> users;
-    private final List<PublicUser> publicUsers;
-    //private final List<NotifyEventInterface> clients;
     private final Map<String, NotifyEventInterface> clients;
     private final Map<String, Project> projects;
     private static final Gson gson = new Gson();
@@ -59,7 +57,6 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
 
         // Persistenza
         this.users = new ArrayList<>();
-        this.publicUsers = new ArrayList<>();
         this.projects = new ConcurrentHashMap<>();
     }
 
@@ -366,7 +363,6 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
 
         // Registro utente nel database
         users.add(new User(username, password));
-        //publicUsers.add(new PublicUser(username));
 
         // Aggiorno tutti gli altri clients con una callback
         // per informarli che un nuovo si è registrato, e risulta quindi offline
@@ -697,12 +693,6 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
     // Recupera l'utente <username>
     private User getUser(String username){
         for(User user: users)
-            if(user.getUsername().equals(username)) return user;
-        return null;
-    }
-
-    private PublicUser getPublicUser(String username){
-        for(PublicUser user: publicUsers)
             if(user.getUsername().equals(username)) return user;
         return null;
     }
