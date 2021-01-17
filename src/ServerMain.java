@@ -367,6 +367,11 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
         // Registro utente nel database
         users.add(new User(username, password));
         //publicUsers.add(new PublicUser(username));
+
+        // Aggiorno tutti gli altri clients con una callback
+        // per informarli che un nuovo si è registrato, e risulta quindi offline
+        try { sendCallback(); }
+        catch (RemoteException e) { e.printStackTrace(); }
     }
 
     // Permette ad un utente di utilizzare il sistema
@@ -774,7 +779,7 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
             List<String> usersStatus = new LinkedList<>();
             for(User user : users)
                 // username:ONLINE oppure username:OFFLINE
-                usersStatus.add(user.getUsername()+":"+user.getStatus().toString());
+                usersStatus.add(user.getStatus().toString()+":"+user.getUsername());
             clientInterface.notifyUsers(usersStatus);
         }
     }
