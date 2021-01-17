@@ -4,8 +4,7 @@ import WorthExceptions.*;
 import com.google.gson.*;
 
 import java.io.IOException;
-import java.net.MulticastSocket;
-import java.net.ServerSocket;
+import java.net.*;
 import java.nio.ByteBuffer;
 import java.nio.channels.*;
 import java.nio.charset.StandardCharsets;
@@ -13,7 +12,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.rmi.RemoteException;
-import java.net.InetSocketAddress;
 import java.rmi.registry.Registry;
 import java.rmi.server.RemoteObject;
 import java.rmi.AlreadyBoundException;
@@ -579,6 +577,25 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
         // Sposto la card (il rispetto dei vincoli è assicurato dal metodo invocato
         project.moveCard(cardName,fromSection,toSection);
 
+        // Invio una notifica sulla chat di progetto
+        String message = getTime()+" WORTH: "+username+" has moved card "+cardName+
+                " from "+fromSection.toString() +" to "+toSection.toString();
+        try {
+            new DatagramSocket().send(new DatagramPacket(
+                    message.getBytes(StandardCharsets.UTF_8), message.length(),
+                    InetAddress.getByName(project.getMulticastIP()), project.getMulticastPort()));
+        } catch (UnknownHostException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+    }
+
+    private String getTime(){
+        Calendar now = Calendar.getInstance();
+        return String.format("(%02d:%02d)",
+                now.get(Calendar.HOUR_OF_DAY), now.get(Calendar.MINUTE));
     }
 
     private String getCardHistory(String username, String projectName, String cardName)

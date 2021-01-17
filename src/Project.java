@@ -157,6 +157,7 @@ public class Project {
         return this.multicastIP;
     }
 
+    public int getMulticastPort() { return this.multicastPort; }
 
 
 }
