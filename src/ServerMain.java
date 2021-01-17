@@ -791,7 +791,7 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
             // username:ONLINE oppure username:OFFLINE
             usersStatus.add(user.getUsername()+":"+user.getStatus().toString());
 
-        System.out.println(usersStatus.toString());
+        if(DEBUG) System.out.println(usersStatus.toString());
 
         // Per ogni client registrato al servizio di callback,
         // invio la lista di utenti ed il loro stato

@@ -19,8 +19,7 @@ import java.rmi.server.UnicastRemoteObject;
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
-// ○
-// ●
+
 
 public class ClientMain extends RemoteObject implements NotifyEventInterface {
     // * TCP
@@ -227,6 +226,14 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
                                 break;
                             case "logout": // TCP
                                 logout();
+                                break;
+
+                            case "listUsers":
+                                listUsers();
+                                break;
+
+                            case "listOnlineUsers":
+                                listOnlineUsers();
                                 break;
 
                             case "createProject":
@@ -478,6 +485,23 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
             //if(DEBUG) System.out.print("["+response[1]+"] ");
             System.out.println(response[2]);
         }
+    }
+
+    private void listUsers(){
+        // ○ == OFFLINE , ● == ONLINE
+        for(String user : usersStatus)
+            if(user.contains("OFFLINE"))
+                // Usare substring invece di split se metto prima lo status?
+                System.out.println("○ "+user.split(":")[0]);
+            else
+                System.out.println("● "+user.split(":")[0]);
+    }
+
+    private void listOnlineUsers(){
+        // ● == ONLINE
+        for(String user : usersStatus)
+            if(user.contains("ONLINE"))
+                System.out.println("● "+user.split(":")[0]);
     }
 
     private void createProject(String projectName)
@@ -844,7 +868,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
 
     @Override
     public void notifyUsers(List<String> users) throws RemoteException {
-        System.out.println(users);
+        //System.out.println(users);
         // Preparo la lista di utenti per l'aggiornamento, eliminando tutti i vecchi record
         usersStatus.clear();
         // Aggiungo le nuove coppie <utente, stato> alla lista
