@@ -19,6 +19,9 @@ import java.rmi.server.UnicastRemoteObject;
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
+// ○
+// ●
+
 public class ClientMain extends RemoteObject implements NotifyEventInterface {
     // * TCP
     private static final int PORT_TCP = 6789;
@@ -32,7 +35,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
     // * CLIENT
     private static boolean logged = false;
     private static String username = "Guest";
-    private static List publicUsers;
+    private static List<String> usersStatus;
     private static final Gson gson = new Gson();
     private static Map<String, ConcurrentLinkedQueue<String>> chats;
     private static Map<String, ChatListener> projectMulticastIP;
@@ -85,6 +88,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
         this.chats = new HashMap<>();
         this.chatListeners = new LinkedHashMap<>();
         this.projectMulticastIP = new LinkedHashMap<>();
+        this.usersStatus = new LinkedList<>();
         try {
             this.multicastSocket = new DatagramSocket();
         } catch (SocketException e) {
@@ -839,9 +843,12 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
     }
 
     @Override
-    public void notifyEvent(List publicUsers) throws RemoteException {
-        ClientMain.publicUsers = publicUsers;
-        //System.out.println(ClientMain.publicUsers);
+    public void notifyUsers(List<String> users) throws RemoteException {
+        System.out.println(users);
+        // Preparo la lista di utenti per l'aggiornamento, eliminando tutti i vecchi record
+        usersStatus.clear();
+        // Aggiungo le nuove coppie <utente, stato> alla lista
+        usersStatus.addAll(users);
     }
 
     public static void main(String[] args){

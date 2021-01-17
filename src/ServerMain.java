@@ -366,7 +366,7 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
 
         // Registro utente nel database
         users.add(new User(username, password));
-        publicUsers.add(new PublicUser(username));
+        //publicUsers.add(new PublicUser(username));
     }
 
     // Permette ad un utente di utilizzare il sistema
@@ -385,10 +385,11 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
 
         // Aggiorno il suo stato su Online
         user.setStatus(User.Status.ONLINE);
-        getPublicUser(username).setStatus(User.Status.ONLINE);
+        //getPublicUser(username).setStatus(User.Status.ONLINE);
 
         // Aggiorno tutti gli altri clients con una callback
-        try { sendCallbacks(); }
+        // per informarli che l'utente è online
+        try { sendCallback(); }
         catch (RemoteException e) { e.printStackTrace(); }
 
         // Ritorno le informazioni Multicast su tutti i
@@ -415,10 +416,11 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
         // sicuramente l'utente ha fatto un login precedentemente, per come il client è implementato
         // Aggiorno il suo stato su Offline
         getUser(username).setStatus(User.Status.OFFLINE);
-        getPublicUser(username).setStatus(User.Status.OFFLINE);
+        //getPublicUser(username).setStatus(User.Status.OFFLINE);
 
         // Aggiorno tutti gli altri clients con una callback
-        try { sendCallbacks(); }
+        // per informarli che l'utente è ora offline
+        try { sendCallback(); }
         catch (RemoteException e) {e.printStackTrace();}
     }
 
@@ -768,8 +770,12 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
             throws RemoteException {
         if(!clients.containsKey(username)) {
             clients.put(username,clientInterface);
-            // TODO: inviare la lista di utenti con il loro stato
-            //clientInterface.notifyEvent(publicUsers);
+            // Lista di stringhe che riporta lo stato di ogni utente del sistema
+            List<String> usersStatus = new LinkedList<>();
+            for(User user : users)
+                // username:ONLINE oppure username:OFFLINE
+                usersStatus.add(user.getUsername()+":"+user.getStatus().toString());
+            clientInterface.notifyUsers(usersStatus);
         }
     }
 
@@ -778,10 +784,20 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
         clients.remove(username, clientInterface);
     }
 
-    public synchronized void sendCallbacks() throws RemoteException{
-        // TODO: fix
-        //for (NotifyEventInterface client : clients)
-        //    client.notifyEvent(publicUsers);
+    public synchronized void sendCallback() throws RemoteException{
+        // Lista di stringhe che riporta lo stato di ogni utente del sistema
+        List<String> usersStatus = new LinkedList<>();
+        for(User user : users)
+            // username:ONLINE oppure username:OFFLINE
+            usersStatus.add(user.getUsername()+":"+user.getStatus().toString());
+
+        System.out.println(usersStatus.toString());
+
+        // Per ogni client registrato al servizio di callback,
+        // invio la lista di utenti ed il loro stato
+        for(Map.Entry<String, NotifyEventInterface> client : clients.entrySet())
+            client.getValue().notifyUsers(usersStatus);
+
     }
 
     // * MAIN

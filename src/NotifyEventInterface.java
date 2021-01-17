@@ -6,7 +6,14 @@ import java.rmi.RemoteException;
 // Interfaccia di notifica server->client con meccanismo callback
 public interface NotifyEventInterface extends Remote {
 
-    void notifyEvent(List PublicUsers)
+    /* Permette di notificare un utente quando si verifica un cambio di stato
+       per un qualunque altro utente del sistema. Il server notifica ogni client
+       registrato al servizio di callback ogni qual volta cambia lo stato di uno
+       degli utenti, sia esso da Offline ad Online (login) o viceversa (logout).
+       Il client non interagisce in alcun modo con queste informazioni, che vengono
+       inviate a titolo informativo, dunque una semplice lista di stringhe.
+     */
+    void notifyUsers(List<String> users)
             throws RemoteException;
 
     /* Permette di notificare un utente quando questo è stato aggiunto
