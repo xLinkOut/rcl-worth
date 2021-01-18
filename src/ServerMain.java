@@ -468,10 +468,9 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
         project.addMember(user);
         user.addProject(project);
 
+        // Invio un avviso all'utente aggiunto, passandogli le informazioni necessarie ad
+        // utilizzare la chat ed informandolo su chi lo ha aggiunto al progetto
         clients.get(memberUsername).notifyProject(project.getMulticastInfo(), username);
-        // TODO: inviare una callback all'utente aggiunto per trasmettere
-        // i dati multicast relativi al progetto
-
     }
 
     private String showMembers(String username, String projectName)
@@ -631,8 +630,15 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
             // Salvo l'IP del progetto per essere riutilizzato
             try{ saveReleasedIP(project.getMulticastIP());
             } catch (MulticastException ignored) {}
-            // Rimuovo il progetto dalla lista personale dell'utente
-            getUser(username).removeProject(project);
+            // Rimuovo il progetto dalle liste personali di tutti i membri
+            // (compreso l'utente che ha richiesto la cancellazione)
+            // e notifica subito l'utente dell'evento
+            for(User user : project.getMembers()) {
+                user.removeProject(project);
+                try { clients.get(user.getUsername()).notifyEvent(
+                        "Ding! "+username+" ha cancellato il progetto "+projectName);
+                } catch (RemoteException e) {e.printStackTrace();}
+            }
             // Rimuovo il progetto dalla lista globale
             projects.remove(projectName);
         }else throw new PendingCardsException();

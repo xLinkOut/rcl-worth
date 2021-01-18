@@ -24,4 +24,10 @@ public interface NotifyEventInterface extends Remote {
      */
     void notifyProject(String multicastInfo, String fromWho)
             throws RemoteException;
+
+    /* Funzione generica che permette al server di notificare il client
+       quando si verifica un evento, inviando il relativo messaggio
+     */
+    void notifyEvent(String message)
+        throws RemoteException;
 }

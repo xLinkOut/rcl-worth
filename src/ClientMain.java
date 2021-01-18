@@ -867,6 +867,13 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
     }
 
     @Override
+    public void notifyEvent(String message) throws RemoteException {
+        // Notifico l'utente e ripristino la shell
+        System.out.println("\n"+message);
+        System.out.print(username+"@WORTH > ");
+    }
+
+    @Override
     public void notifyUsers(List<String> users) throws RemoteException {
         //System.out.println(users);
         // Preparo la lista di utenti per l'aggiornamento, eliminando tutti i vecchi record
