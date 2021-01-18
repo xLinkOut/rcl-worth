@@ -40,6 +40,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
     private static Map<String, ChatListener> projectMulticastIP;
     private static Map<String, Thread> chatListeners;
     private static DatagramSocket multicastSocket;
+    private static final boolean DEBUG = true; // Hardcoded
 
     // * MESSAGES
     private static final String msgStartup =
@@ -90,8 +91,8 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
         this.usersStatus = new LinkedList<>();
         try {
             this.multicastSocket = new DatagramSocket();
-        } catch (SocketException e) {
-            e.printStackTrace();
+        } catch (SocketException se) {
+            se.printStackTrace();
             System.exit(-1);
         }
     }
@@ -157,17 +158,12 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
                                         // Provo ad effettuare il login automaticamente
                                         login(cmd[1], cmd[2]);
 
-                                    } catch (IllegalArgumentException iae) {
-                                        // Se almeno uno dei due parametri risulta invalido
-                                        System.out.println(iae.getMessage());
-                                        System.out.println("Usage: register username password");
-
-                                    } catch (ArrayIndexOutOfBoundsException e) {
+                                    } catch (ArrayIndexOutOfBoundsException | IllegalArgumentException e) {
                                         // Se almeno uno dei due parametri tra username e password non è presente
-                                        // oppure risulta vuoto, informo utente e stampo help del comando register
-                                        System.out.println("Oops! It looks like you haven't entered username or password!\n" +
-                                                "Usage: register username password");
-
+                                        // oppure risulta vuoto stampo l'help del comando register
+                                        if (DEBUG) System.out.println(e.getMessage());
+                                        else if (e.getMessage().contains("Colon")) System.out.println(e.getMessage());
+                                        System.out.println("Usage: register username password");
                                     } catch (UsernameAlreadyTakenException uate) {
                                         // L'username utilizzato è già stato preso da un altro utente
                                         System.out.println("Username is already taken! Try with " + cmd[1] + "123 or X" + cmd[1] + "X");
@@ -179,31 +175,28 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
                                         // cmd[1] = username, nome utente del proprio account
                                         // cmd[2] = password, password del proprio account
                                         login(cmd[1], cmd[2]);
-                                    } catch (IllegalArgumentException iae) {
-                                        System.out.println("Insert a valid " + iae.getMessage() +
-                                                "Usage: register username password");
-                                    } catch (ArrayIndexOutOfBoundsException e) {
-                                        // Se almeno uno dei due parametri tra username e password
-                                        // non è presente o risulta vuoto, informo utente
-                                        // e stampo help del comando register
-                                        System.out.println("Oops! It looks like you haven't entered username or password!\n" +
-                                                "Usage: login username password");
+                                    } catch (ArrayIndexOutOfBoundsException | IllegalArgumentException e) {
+                                        // Se almeno uno dei due parametri tra username e password non è presente
+                                        // oppure risulta vuoto, stampo l'help del comando login
+                                        if (DEBUG) System.out.println(e.getMessage());
+                                        System.out.println("Usage: login username password");
                                     }
                                     break;
+
                                 case "logout":
-                                    System.out.println("Mmh... what about some login instead?\n" +
-                                            "Usage: login username password");
+                                    System.out.println("Mmh... what about some login instead?");
+                                    System.out.println("Usage: login username password");
                                     break;
-                                case "help":
-                                    System.out.println(msgHelpGuest);
-                                    break;
+
                                 case "quit":
                                     socketChannel.close();
-                                    System.out.println("Hope to see you soon, " + username + "!");
+                                    System.out.println("Hope to see you soon, Guest!");
                                     System.exit(0);
                                     break;
+
+                                case "help":
                                 default:
-                                    System.out.println("Command not recognized or not available as a guest, please login.");
+                                    System.out.println(msgHelpGuest);
                             }
                         } else { System.out.println(msgHelpGuest); }
                     }catch (IOException ioe){
@@ -218,13 +211,16 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
                 try{
                     if(cmd.length > 0){
                         switch (cmd[0]){
-                            case "register": // RMI
+
+                            case "register":
                                 System.out.println("You are already logged in! Logout first, if you want to create another WORTH account");
                                 break;
-                            case "login": // TCP
+
+                            case "login":
                                 System.out.println("You are already logged in! Logout first, if you want to login with another WORTH account");
                                 break;
-                            case "logout": // TCP
+
+                            case "logout":
                                 logout();
                                 break;
 
@@ -242,11 +238,10 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
                                     if(cmd[1].contains(":"))
                                         throw new IllegalArgumentException("Colon character (:) not allowed in project name");
                                     createProject(cmd[1]);
-                                }catch(ArrayIndexOutOfBoundsException e){
-                                    System.out.println("Every project need a name!\n" +
-                                            "Usage: createProject projectName");
-                                }catch (IllegalArgumentException iae){
-                                    System.out.println(iae.getMessage());
+                                }catch(ArrayIndexOutOfBoundsException | IllegalArgumentException e){
+                                    if (DEBUG) System.out.println(e.getMessage());
+                                    else if (e.getMessage().contains("Colon")) System.out.println(e.getMessage());
+                                    System.out.println("Usage: createProject projectName");
                                 }
                                 break;
 
@@ -255,11 +250,9 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
                                     // cmd[1] = projectName, nome del progetto
                                     // cmd[2] = memberUsername, username dell'utente da inserire
                                     addMember(cmd[1],cmd[2]);
-                                }catch (ArrayIndexOutOfBoundsException e){
-                                    System.out.println("Something is missing from your request...\n"+
-                                            "Usage: addMember projectName memberUsername");
-                                }catch (IllegalArgumentException iae){
-                                    System.out.println(iae.getMessage());
+                                }catch (ArrayIndexOutOfBoundsException | IllegalArgumentException e){
+                                    if (DEBUG) System.out.println(e.getMessage());
+                                    System.out.println("Usage: addMember projectName memberUsername");
                                 }
                                 break;
 
@@ -267,11 +260,9 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
                                 try{
                                     // cmd[1] = projectName, nome del progetto
                                     showMembers(cmd[1]);
-                                }catch (ArrayIndexOutOfBoundsException e) {
-                                    System.out.println("Something is missing from your request...\n" +
-                                            "Usage: showMembers projectName");
-                                }catch (IllegalArgumentException iae) {
-                                    System.out.println(iae.getMessage());
+                                }catch (ArrayIndexOutOfBoundsException | IllegalArgumentException e) {
+                                    if (DEBUG) System.out.println(e.getMessage());
+                                    System.out.println("Usage: showMembers projectName");
                                 }
                                 break;
 
@@ -280,14 +271,14 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
                                     // cmd[1] = projectName, nome del progetto
                                     // cmd[2] = cardName, nome della card
                                     // cmd[3] = cardDescription, descrizione testuale della card
-                                    if (cmd[1].contains(":")) throw new IllegalArgumentException("Colon character (:) not allowed in username\n");
+                                    if (cmd[1].contains(":"))
+                                        throw new IllegalArgumentException("Colon character (:) not allowed in username\n");
                                     // TODO: Unire la caption su cmd[3]
                                     addCard(cmd[1], cmd[2], cmd[3]);
-                                }catch (ArrayIndexOutOfBoundsException e){
-                                    System.out.println("Something is missing from your request...\n"+
-                                            "Usage: addCard projectName cardName cardCaption");
-                                }catch (IllegalArgumentException iae) {
-                                    System.out.println(iae.getMessage());
+                                }catch (ArrayIndexOutOfBoundsException | IllegalArgumentException e){
+                                    if (DEBUG) System.out.println(e.getMessage());
+                                    else if (e.getMessage().contains("Colon")) System.out.println(e.getMessage());
+                                    System.out.println("Usage: addCard projectName cardName cardCaption");
                                 }
                                 break;
 
@@ -296,11 +287,9 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
                                     // cmd[1] = projectName, nome del progetto
                                     // cmd[2] = cardName, nome della card
                                     showCard(cmd[1],cmd[2]);
-                                } catch (ArrayIndexOutOfBoundsException e) {
-                                    System.out.println("Something is missing from your request...\n"+
-                                            "Usage: showCard projectName cardName");
-                                } catch (IllegalArgumentException iae) {
-                                    System.out.println(iae.getMessage());
+                                } catch (ArrayIndexOutOfBoundsException | IllegalArgumentException e) {
+                                    if (DEBUG) System.out.println(e.getMessage());
+                                    System.out.println("Usage: showCard projectName cardName");
                                 }
                                 break;
 
@@ -313,11 +302,9 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
                                     // cmd[1] = projectName, nome del progetto
                                     // table  = true if the user wants a table version of the cards
                                     showCards(cmd[1], cmd.length == 3);
-                                } catch (ArrayIndexOutOfBoundsException e) {
-                                    System.out.println("Something is missing from your request...\n"+
-                                            "Usage: showCards projectName");
-                                } catch (IllegalArgumentException iae) {
-                                    System.out.println(iae.getMessage());
+                                } catch (ArrayIndexOutOfBoundsException | IllegalArgumentException e) {
+                                    if (DEBUG) System.out.println(e.getMessage());
+                                    System.out.println("Usage: showCards projectName");
                                 }
                                 break;
 
@@ -328,11 +315,9 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
                                     // cmd[3] = from, lista dove si trova attualmente la card
                                     // cmd[4] = to, lista in cui si desidera spostare la card
                                     moveCard(cmd[1],cmd[2],cmd[3],cmd[4]);
-                                } catch (ArrayIndexOutOfBoundsException e) {
-                                    System.out.println("Something is missing from your request...\n"+
-                                            "Usage: moveCard projectName cardName from to");
-                                } catch (IllegalArgumentException iae) {
-                                    System.out.println(iae.getMessage());
+                                } catch (ArrayIndexOutOfBoundsException | IllegalArgumentException e) {
+                                    if (DEBUG) System.out.println(e.getMessage());
+                                    System.out.println("Usage: moveCard projectName cardName from to");
                                 }
                                 break;
 
@@ -341,11 +326,9 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
                                     // cmd[1] = projectName, nome del progetto
                                     // cmd[2] = cardName, nome della card
                                     getCardHistory(cmd[1],cmd[2]);
-                                } catch (ArrayIndexOutOfBoundsException e) {
-                                    System.out.println("Something is missing from your request...\n" +
-                                            "Usage: getCardHistory projectName cardName");
-                                } catch(IllegalArgumentException iae){
-                                    System.out.println(iae.getMessage());
+                                } catch (ArrayIndexOutOfBoundsException | IllegalArgumentException e) {
+                                    if (DEBUG) System.out.println(e.getMessage());
+                                    System.out.println("Usage: getCardHistory projectName cardName");
                                 }
                                 break;
 
@@ -354,10 +337,8 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
                                     // cmd[1] = projectName, nome del progetto
                                     cancelProject(cmd[1]);
                                 } catch (ArrayIndexOutOfBoundsException e) {
-                                    System.out.println("Something is missing from your request...\n" +
-                                            "Usage: cancelProject projectName");
-                                } catch(IllegalArgumentException iae){
-                                    System.out.println(iae.getMessage());
+                                    if (DEBUG) System.out.println(e.getMessage());
+                                    System.out.println("Usage: cancelProject projectName");
                                 }
                                 break;
 
@@ -365,13 +346,11 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
                                 try{
                                     // cmd[1] = projectName, nome del progetto
                                     readChat(cmd[1]);
-                                } catch (ProjectNotFoundException e) {
+                                } catch (ProjectNotFoundException pnfe) {
                                     System.out.println("Can't found "+cmd[1]+", are you sure that exists? Try createProject to create a project");
-                                } catch (ArrayIndexOutOfBoundsException e) {
-                                    System.out.println("Something is missing from your request...\n" +
-                                            "Usage: readChat projectName");
-                                } catch(IllegalArgumentException iae){
-                                    System.out.println(iae.getMessage());
+                                } catch (ArrayIndexOutOfBoundsException | IllegalArgumentException e) {
+                                    if (DEBUG) System.out.println(e.getMessage());
+                                    System.out.println("Usage: readChat projectName");
                                 }
                                 break;
 
@@ -381,37 +360,30 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
                                     // cmd[2] ... cmd[n] = testo del messaggio da inviare
                                     // (viene "ricostruito" in una stringa essendo cmd un array)
                                     sendChatMsg(cmd[1],String.join(" ",Arrays.copyOfRange(cmd,2,cmd.length)));
-                                } catch (ProjectNotFoundException e) {
+                                } catch (ProjectNotFoundException pnfe) {
                                     System.out.println("Can't found "+cmd[1]+", are you sure that exists? Try createProject to create a project");
-                                } catch (ArrayIndexOutOfBoundsException e) {
-                                    System.out.println("Something is missing from your request...\n" +
-                                            "Usage: sendChatMsg projectName message");
-                                } catch(IllegalArgumentException iae){
-                                    System.out.println(iae.getMessage());
+                                } catch (ArrayIndexOutOfBoundsException | IllegalArgumentException e) {
+                                    if (DEBUG) System.out.println(e.getMessage());
+                                    System.out.println("Usage: sendChatMsg projectName message");
                                 }
                                 break;
 
-
-                            case "help":
-                                System.out.println(msgHelp);
-                                break;
                             case "quit":
-                                if(logged){
-                                    server.unregisterCallback(username,notifyStub);
-                                    logout();
-                                }
-                                socketChannel.close();
                                 System.out.println("Hope to see you soon, "+username+"!");
+                                if(logged){ server.unregisterCallback(username,notifyStub); logout(); }
+                                socketChannel.close();
                                 System.exit(0);
                                 break;
+
+                            case "help":
                             default:
-                                System.out.println("Command not recognized. Type help if you're stuck!");
+                                System.out.println(msgHelp);
                         }
-                    }else{ System.out.println(msgHelpGuest); }
+                    }else{ System.out.println(msgHelp); }
                 } catch (IOException ioe){ioe.printStackTrace();}
             }
 
-        } catch (IOException e) {
+        } catch (IOException ioe) {
             System.out.println("WORTH seems to be unreachable... try again in a few moments, apologize for the inconvenience.");
             System.exit(-1);
         }
@@ -785,9 +757,9 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
                     InetAddress.getByName(multicastInfo.getMulticastIP()), multicastInfo.getMulticastPort()));
             System.out.println("Message sent!");
         } catch (UnknownHostException e) {
-            e.printStackTrace();
+            System.out.println("I'm not sure if I have the correct address for the project "+projectName+" chat, please try to log out and then log in again");
         } catch (IOException e) {
-            e.printStackTrace();
+            System.out.println("There was an error trying to send the message, please try again!");
         }
 
     }
