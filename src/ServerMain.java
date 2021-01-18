@@ -121,7 +121,7 @@ public class ServerMain extends RemoteObject implements ServerRMI{
                 }
 
                 // Se il "data/Multicast.json" non esiste oppure è vuoto, ne creo uno di default
-                if(Files.notExists(pathMulticast) || Files.size(pathUsers) == 0)
+                if(Files.notExists(pathMulticast) || Files.size(pathMulticast) == 0)
                     Files.write(pathMulticast, defaultMulticast.getBytes(StandardCharsets.UTF_8));
             }
 
@@ -439,8 +439,15 @@ public class ServerMain extends RemoteObject implements ServerRMI{
         // Controllo unicità username
         if(userExists(username)) throw new UsernameAlreadyTakenException("username");
 
-        // Registro utente nel database
+        // Aggiungo il nuovo utente al sistema
         users.add(new User(username, password));
+        // E ne tengo traccia anche sul filesystem
+        try {
+            jacksonMapper.writeValue(Files.newBufferedWriter(pathUsers), users);
+        } catch (IOException ioe) {
+            if (DEBUG) ioe.printStackTrace();
+            System.err.println("I was unable to save user information on the filesystem, on next restart they will probably be lost ...");
+        }
 
         // Aggiorno tutti gli altri clients con una callback
         // per informarli che un nuovo si è registrato, e risulta quindi offline
@@ -529,6 +536,14 @@ public class ServerMain extends RemoteObject implements ServerRMI{
         Project project = new Project(projectName, user, genMulticastIP(),1025+random.nextInt(64510));
         projects.put(projectName, project);
         user.addProject(project);
+        // TODO: eliminare se si riesce a togliere la dipendenza da user.projects
+        try {
+            jacksonMapper.writeValue(Files.newBufferedWriter(pathUsers), users);
+        } catch (IOException ioe) {
+            if (DEBUG) ioe.printStackTrace();
+            System.err.println("I was unable to save user information on the filesystem, on next restart they will probably be lost ...");
+        }
+
         // Ritorno le informazioni multicast da passare all'utente
         // affinché possa utilizzare la chat di progetto
         return project.getMulticastInfo();
@@ -558,7 +573,13 @@ public class ServerMain extends RemoteObject implements ServerRMI{
         // Aggiungo memberUsername come nuovo membro del progetto projectName
         project.addMember(user);
         user.addProject(project);
-
+        // TODO: eliminare se si riesce a togliere la dipendenza da user.projects
+        try {
+            jacksonMapper.writeValue(Files.newBufferedWriter(pathUsers), users);
+        } catch (IOException ioe) {
+            if (DEBUG) ioe.printStackTrace();
+            System.err.println("I was unable to save user information on the filesystem, on next restart they will probably be lost ...");
+        }
         // Invio un avviso all'utente aggiunto, passandogli le informazioni necessarie ad
         // utilizzare la chat ed informandolo su chi lo ha aggiunto al progetto
         clients.get(memberUsername).notifyProject(project.getMulticastInfo(), username);
@@ -716,6 +737,13 @@ public class ServerMain extends RemoteObject implements ServerRMI{
             // e notifica subito l'utente dell'evento
             for(User user : project.getMembers()) {
                 user.removeProject(project);
+                // TODO: eliminare se si riesce a togliere la dipendenza da user.projects
+                try {
+                    jacksonMapper.writeValue(Files.newBufferedWriter(pathUsers), users);
+                } catch (IOException ioe) {
+                    if (DEBUG) ioe.printStackTrace();
+                    System.err.println("I was unable to save user information on the filesystem, on next restart they will probably be lost ...");
+                }
                 try { clients.get(user.getUsername()).notifyEvent(
                         "Ding! "+username+" ha cancellato il progetto "+projectName);
                 } catch (RemoteException re) {re.printStackTrace();}
