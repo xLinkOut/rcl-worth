@@ -1,3 +1,7 @@
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -7,12 +11,15 @@ public class User {
 
     private final String username;
     private final String password;
-    private Status status = Status.OFFLINE; // da ignorare nel json
+    @JsonIgnore
+    private Status status = Status.OFFLINE; // All'avvio del sistema è di default a Offline
     //private final List<Project> projects;
 
     // TODO: hash password
 
-    public User(String username, String password){
+    @JsonCreator
+    public User(@JsonProperty("username") String username,
+                @JsonProperty("password") String password){
         this.username = username;
         this.password = password;
         //this.projects = new ArrayList<>();

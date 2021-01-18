@@ -109,13 +109,13 @@ public class ServerMain extends RemoteObject implements ServerRMI{
                     this.projects = new ConcurrentHashMap<>();
                 }
 
-                // Se il "data/Users.json" esiste e non è vuoto, carico in memoria le informazioni
+                // Se "data/Users.json" esiste e non è vuoto, carico in memoria la lista di utenti registrati
                 if(Files.exists(pathUsers) && Files.size(pathUsers) > 0){
                     this.users = jacksonMapper.readValue(
                             Files.newBufferedReader(pathUsers),
                             new TypeReference<List<User>>(){});
                     if (DEBUG) System.out.println(this.users.toString());
-                // Altrimenti inizializzo la struttura dati senza caricare nulla
+                // Altrimenti inizializzo la struttura dati vuota
                 }else{
                     this.users = new ArrayList<>();
                 }
