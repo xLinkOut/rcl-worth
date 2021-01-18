@@ -8,15 +8,14 @@ public class User {
     private final String username;
     private final String password;
     private Status status = Status.OFFLINE; // da ignorare nel json
-
-    private final List<Project> projects;
+    //private final List<Project> projects;
 
     // TODO: hash password
 
     public User(String username, String password){
         this.username = username;
         this.password = password;
-        this.projects = new ArrayList<>();
+        //this.projects = new ArrayList<>();
     }
 
     public String getUsername() { return username; }
@@ -31,11 +30,7 @@ public class User {
         return this.password.equals(password);
     }
 
-    public void addProject(Project project){
-        this.projects.add(project);
-    }
-    public List<Project> getProjects(){
-        return this.projects;
-    }
-    public void removeProject(Project project) {this.projects.remove(project);}
+    //public void addProject(Project project){ this.projects.add(project); }
+    //public List<Project> getProjects(){ return this.projects; }
+    //public void removeProject(Project project) { this.projects.remove(project); }
 }

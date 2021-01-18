@@ -480,7 +480,8 @@ public class ServerMain extends RemoteObject implements ServerRMI{
 
         // Ritorno le informazioni Multicast su tutti i
         // (eventuali) progetti di cui l'utente è membro
-        List<Project> userProjects = user.getProjects();
+        // TODO: devo aver già caricato i progetti in memoria, ovviamente
+        List<Project> userProjects = getUserProjects(username);
         // Se l'utente non è membro di nessun progetto, ritorno una stringa vuota
         if(userProjects.isEmpty()) return "";
         StringBuilder output = new StringBuilder();
@@ -515,7 +516,7 @@ public class ServerMain extends RemoteObject implements ServerRMI{
             throws ProjectNotFoundException {
         if(DEBUG) System.out.println("Server@WORTH > listProjects "+username);
 
-        List<Project> list = getUser(username).getProjects();
+        List<Project> list = getUserProjects(username);
         if(list.size() == 0) throw new ProjectNotFoundException(username);
         return list.stream()
                 .map(Project::getName)
@@ -535,7 +536,7 @@ public class ServerMain extends RemoteObject implements ServerRMI{
         User user = getUser(username);
         Project project = new Project(projectName, user, genMulticastIP(),1025+random.nextInt(64510));
         projects.put(projectName, project);
-        user.addProject(project);
+        //user.addProject(project);
         // TODO: eliminare se si riesce a togliere la dipendenza da user.projects
         try {
             jacksonMapper.writeValue(Files.newBufferedWriter(pathUsers), users);
@@ -572,7 +573,7 @@ public class ServerMain extends RemoteObject implements ServerRMI{
 
         // Aggiungo memberUsername come nuovo membro del progetto projectName
         project.addMember(user);
-        user.addProject(project);
+        //user.addProject(project);
         // TODO: eliminare se si riesce a togliere la dipendenza da user.projects
         try {
             jacksonMapper.writeValue(Files.newBufferedWriter(pathUsers), users);
@@ -736,7 +737,7 @@ public class ServerMain extends RemoteObject implements ServerRMI{
             // (compreso l'utente che ha richiesto la cancellazione)
             // e notifica subito l'utente dell'evento
             for(User user : project.getMembers()) {
-                user.removeProject(project);
+                //user.removeProject(project);
                 // TODO: eliminare se si riesce a togliere la dipendenza da user.projects
                 try {
                     jacksonMapper.writeValue(Files.newBufferedWriter(pathUsers), users);
@@ -887,6 +888,12 @@ public class ServerMain extends RemoteObject implements ServerRMI{
         } catch (IOException e) { throw new MulticastException(); }
     }
 
+    private List<Project> getUserProjects(String username){
+        User user = getUser(username);
+        return projects.values().stream()
+                .filter(project -> project.getMembers().contains(user))
+                .collect(Collectors.toList());
+    }
     // * CALLBACKS
 
     @Override
