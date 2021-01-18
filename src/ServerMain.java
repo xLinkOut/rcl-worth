@@ -1,5 +1,8 @@
 // @author Luca Cirillo (545480)
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.gson.*;
 import WorthExceptions.*;
 
@@ -21,6 +24,7 @@ import java.nio.charset.StandardCharsets;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.concurrent.ConcurrentHashMap;
 
+@SuppressWarnings("ReadWriteStringCanBeUsed")
 public class ServerMain extends RemoteObject implements ServerRMI{
     // * TCP
     private static final int PORT_TCP = 6789;
@@ -28,35 +32,108 @@ public class ServerMain extends RemoteObject implements ServerRMI{
     private static final int PORT_RMI = 9876;
     private static final String NAME_RMI = "WORTH-SERVER";
     // * PATHS
-    private static final Path pathMulticast = Paths.get("Multicast.json");
+    private static final Path pathData = Paths.get("data/");
+    private static final Path pathUsers = Paths.get("data/Users.json");
+    private static final Path pathProjects = Paths.get("data/Projects/");
+    private static final Path pathMulticast = Paths.get("data/Multicast.json");
     // * SERVER
     private static final boolean DEBUG = true;
     private static final Random random = new Random();
     private static final Gson gson = new Gson();
-    private final List<User> users;
-    private final Map<String, NotifyEventInterface> clients;
-    private final Map<String, Project> projects;
+    private static final ObjectMapper jacksonMapper = new ObjectMapper()
+            .enable(SerializationFeature.INDENT_OUTPUT);
+
+    // Restore <final> keyword
+    private List<User> users;
+    private Map<String, NotifyEventInterface> clients;
+    private Map<String, Project> projects;
+
+    // * DEFAULT
+    private static final String defaultMulticast = """
+    {"lastMulticastIP":"224.0.0.1","releasedIP":[]}
+    """;
 
     // Inizializza il sistema oppure ripristina l'ultima sessione
     public ServerMain(){
         // Callback
         super();
-        clients = new LinkedHashMap<>();
-        // Multicast
-        String defaultMulticast = """
-            {"lastMulticastIP":"224.0.0.1","releasedIP":[]}
-        """;
-        if(!Files.exists(pathMulticast)){
-            try {
-                Files.write(pathMulticast,defaultMulticast.getBytes(StandardCharsets.UTF_8));
-            } catch (IOException ioe) {
-                System.err.println("Failed to create default Multicast config file!");
-                System.exit(-1); }
-        }
 
         // Persistenza
-        this.users = new ArrayList<>();
-        this.projects = new ConcurrentHashMap<>();
+        try{
+            // Se la directory "data/" non esiste,
+            // probabilmente è il primo avvio del sistema
+            if(Files.notExists(pathData)){
+                if (DEBUG) System.out.println("System bootstrap");
+                // Costruisco l'albero di directory ed
+                // i file config di default
+                // data/
+                Files.createDirectory(pathData);
+                // data/Projects/
+                Files.createDirectory(pathProjects);
+                // data/Users.json
+                Files.createFile(pathUsers);
+                // data/Multicast.json
+                Files.createFile(pathMulticast);
+                // Inizializzo il file di Multicast
+                Files.write(pathMulticast, defaultMulticast.getBytes(StandardCharsets.UTF_8));
+                // Inizializzo le strutture dati locali
+                this.users = new ArrayList<>();
+                this.projects = new ConcurrentHashMap<>();
+            }else{
+                // La directory "data/" esiste, probabilmente il sistema è già stato avviato prima d'ora
+                // Cerco eventuali sessioni precedenti da ripristinare
+
+                // Se la directory "data/Projects/" esiste
+                if(Files.exists(pathProjects)){
+                    // Elenco i progetti presenti in "data/Projects/"
+                    List<Path> subfolders = Files.walk(pathProjects, 1)
+                            .filter(Files::isDirectory)
+                            .collect(Collectors.toList());
+                    System.out.println(subfolders.toString());
+                    // Rimuovo il primo elemento, che corrisponde proprio alla cartella "data/Projects/"
+                    subfolders.remove(0);
+
+                    // Per ogni progetto presente, ne ricostruisco la struttura
+                    for(Path projectFolder : subfolders){
+                        // Se esiste il file di progetto "<projectName>.json"
+                        System.out.println(projectFolder.toUri());
+                    }
+
+                    // Temporary, first I need to serialize things
+                    this.projects = new ConcurrentHashMap<>();
+
+                }else{
+                    // Altrimenti creo la cartella per contenere i futuri progetti
+                    Files.createDirectory(pathProjects);
+                    // Ed inizializzo la struttura dati senza caricare nulla
+                    this.projects = new ConcurrentHashMap<>();
+                }
+
+                // Se il "data/Users.json" esiste e non è vuoto, carico in memoria le informazioni
+                if(Files.exists(pathUsers) && Files.size(pathUsers) > 0){
+                    this.users = jacksonMapper.readValue(
+                            Files.newBufferedReader(pathUsers),
+                            new TypeReference<List<User>>(){});
+                    if (DEBUG) System.out.println(this.users.toString());
+                // Altrimenti inizializzo la struttura dati senza caricare nulla
+                }else{
+                    this.users = new ArrayList<>();
+                }
+
+                // Se il "data/Multicast.json" non esiste oppure è vuoto, ne creo uno di default
+                if(Files.notExists(pathMulticast) || Files.size(pathUsers) == 0)
+                    Files.write(pathMulticast, defaultMulticast.getBytes(StandardCharsets.UTF_8));
+            }
+
+            // Inizializzo la struttura dati utilizzata per le callbacks,
+            // che viene riempita solamente a runtime e non persiste sul filesystem
+            this.clients = new LinkedHashMap<>();
+
+        } catch (IOException ioe) {
+            System.err.println("An error occurred during system initialization, closing.");
+            if (DEBUG) ioe.printStackTrace();
+            System.exit(-1);
+        }
     }
 
     // Server go live!
@@ -676,7 +753,7 @@ public class ServerMain extends RemoteObject implements ServerRMI{
             // Finché ci sono bytes da leggere, continuo
         } while (bytesRead >= 1024);
 
-        if(DEBUG) System.out.println("Server@WORTH > "+clientRequest);
+        //if(DEBUG) System.out.println("Server@WORTH > "+clientRequest);
         return clientRequest.toString();
     }
 
