@@ -1,46 +1,43 @@
 // @author Luca Cirillo (545480)
 
+import com.google.gson.Gson;
 import WorthExceptions.ProjectNotFoundException;
 import WorthExceptions.UsernameAlreadyTakenException;
-import com.google.gson.Gson;
-import jdk.jfr.MetadataDefinition;
 
-import java.io.IOException;
 import java.net.*;
+import java.util.*;
+import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
-import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
+import java.rmi.NotBoundException;
 import java.rmi.registry.Registry;
+import java.rmi.server.RemoteObject;
 import java.nio.channels.SocketChannel;
 import java.rmi.registry.LocateRegistry;
-import java.rmi.server.RemoteObject;
+import java.nio.charset.StandardCharsets;
 import java.rmi.server.UnicastRemoteObject;
-import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
-
-
 
 public class ClientMain extends RemoteObject implements NotifyEventInterface {
     // * TCP
     private static final int PORT_TCP = 6789;
     private static final String IP_SERVER = "127.0.0.1";
-    private static SocketChannel socketChannel; // TCP
+    private static SocketChannel socketChannel;
     // * RMI
     private static final int PORT_RMI = 9876;
     private static final String NAME_RMI = "WORTH-SERVER";
     private static ServerRMI server = null;
     private static NotifyEventInterface notifyStub;
     // * CLIENT
+    private static final boolean DEBUG = true; // Hardcoded
     private static boolean logged = false;
+    private static final Gson gson = new Gson();
     private static String username = "Guest";
     private static List<String> usersStatus;
-    private static final Gson gson = new Gson();
-    private static Map<String, ConcurrentLinkedQueue<String>> chats;
-    private static Map<String, ChatListener> projectMulticastIP;
-    private static Map<String, Thread> chatListeners;
     private static DatagramSocket multicastSocket;
-    private static final boolean DEBUG = true; // Hardcoded
+    private static Map<String, Thread> chatListeners;
+    private static Map<String, ChatListener> projectMulticastIP;
+    private static Map<String, ConcurrentLinkedQueue<String>> chats;
 
     // * MESSAGES
     private static final String msgStartup =
@@ -56,31 +53,32 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
     private static final String msgHelpGuest =
         """
         You need to login to WORTH in order to use it. Here some commands:
-        \tregister username password | Create a new WORTH account;
-        \tlogin    username password | Login to WORTH using your credentials;
-        \thelp                       | Show this help;
-        \tquit                       | Close WORTH.
+        \tregister <username> <password> | Create a new WORTH account;
+        \tlogin    <username> <password> | Login to WORTH using your credentials;
+        \thelp                           | Show this help;
+        \tquit                           | Close WORTH.
         """;
     private static final String msgHelp =
         """
-        \tcreateProject <projectName>                 | Create a new project
-        \taddMember <projectName> <memberUsername>    | Add a new member in a project
-        \taddCard <projectName> <cardName> <cardDesc> | Create and assign a new card to a project
-        \tshowMembers <projectName>                   | Shows the current members of a project
-        \tshowCard <projectName> <cardName>           | Shows information about a card assigned to a project
-        \tshowCards <projectName>                     | Shows all cards assigned to a project 
-        \tmoveCard ---
-        \tgetCardHistory ---
-        \tcancelProject ---
-        \tlistUsers ---
-        \tlistOnlineUsers ---
-        \treadChat ---
-        \tsendChatMsg ---
-        \tlogout                                       | Logout from your WORTH account
-        \thelp                                         | Show this help;
-        \tquit                                         | Close WORTH.
+        \tcreateProject <projectName>                   | Create a new project;
+        \taddMember <projectName> <memberUsername>      | Add a new member in a project;
+        \tshowMembers <projectName>                     | Shows the current members of a project;
+        \taddCard <projectName> <cardName> <cardDesc>   | Create and assign a new card to a project;
+        \tshowCard <projectName> <cardName>             | Shows information about a card assigned to a project;
+        \tshowCards <projectName> [table]               | Shows all cards assigned to a project;
+        \tmoveCard <projectName> <cardName> <from> <to> | Move a card from a list to another;
+        \tgetCardHistory <projectName> <cardName>       | Shows the history of a card;
+        \treadChat <projectName>                        | Read message sent in the project chat;
+        \tsendChatMsg <projectName> <message>           | Send a message in the project chat;
+        \tcancelProject <projectName>                   | Cancel a project (Warning, it's not reversible);
+        \tlistUsers                                     | List all WORTH users and their status;
+        \tlistOnlineUsers                               | List only users that are currently online;
+        \tlogout                                        | Logout from your WORTH account;
+        \thelp                                          | Show this help;
+        \tquit                                          | Logout and close WORTH.
         """;
 
+    // Inizializza il client WORTH
     public ClientMain(){
         super(); // Callback
 
@@ -97,6 +95,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
         }
     }
 
+    // Avvia il client WORTH
     private void run(){
         // Messaggio di avvio
         System.out.println(msgStartup);
@@ -389,6 +388,9 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
         }
     }
 
+    // * ENDPOINTS
+
+    // Effettua il login al sistema WORTH
     private void login(String username, String password)
             throws IllegalArgumentException, IOException {
         // Controllo validità dei parametri
@@ -436,12 +438,14 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
             System.out.println(response[1]);
         }else {
             // Stampo il codice dell'operazione soltanto se sono in modalità debug
-            //if(DEBUG) System.out.print("["+response[1]+"] ");
+            if (DEBUG) System.out.print("["+response[1]+"] ");
             System.out.println(response[2]);
         }
     }
 
-    private void logout() throws IOException {
+    // Effettua il logout dal sistema WORTH
+    private void logout()
+            throws IOException {
         // Invio al server il comando di logout
         sendRequest("logout "+username);
         // Se tutto ok
@@ -454,28 +458,33 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
             server.unregisterCallback(username, notifyStub);
             System.out.println(response[1]);
         }else {
-            //if(DEBUG) System.out.print("["+response[1]+"] ");
+            if (DEBUG) System.out.print("["+response[1]+"] ");
             System.out.println(response[2]);
         }
     }
 
-    private void listUsers(){
-        // ○ == OFFLINE , ● == ONLINE
-        for(String user : usersStatus)
-            if(user.contains("OFFLINE"))
-                // Usare substring invece di split se metto prima lo status?
-                System.out.println("○ "+user.substring(8));
-            else
-                System.out.println("● "+user.substring(7));
+    // Elenca i progetti di cui l'utente fa parte
+    private void listProjects()
+            throws IOException {
+        sendRequest("listProjects "+username);
+        String[] response = readResponse();
+        if(response[0].equals("ok")){
+            System.out.println("These are the projects you are a member of:");
+            // Parso la lista inviata dal server
+            String[] projectsList = response[1].substring(1,response[1].length()-1).split(" ");
+            for (String s : projectsList) {
+                if (s.charAt(s.length() - 1) == ',')
+                    System.out.println("\t- " + s.substring(0, s.length() - 1));
+                else // Last member
+                    System.out.println("\t- " + s);
+            }
+        }else {
+            if (DEBUG) System.out.print("["+response[1]+"] ");
+            System.out.println(response[2]);
+        }
     }
 
-    private void listOnlineUsers(){
-        // ● == ONLINE
-        for(String user : usersStatus)
-            if(user.contains("ONLINE"))
-                System.out.println("● "+user.substring(7));
-    }
-
+    // Crea un nuovo progetto e l'utente ne diventa membro
     private void createProject(String projectName)
             throws IllegalArgumentException, IOException {
         // Controllo validità dei parametri
@@ -511,11 +520,12 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
             // Stampo un messaggio di conferma
             System.out.println(response[1]);
         }else {
-            //if(DEBUG) System.out.print("["+response[1]+"] ");
+            if (DEBUG) System.out.print("["+response[1]+"] ");
             System.out.println(response[2]);
         }
     }
 
+    // Aggiunge un nuovo utente tra i membri del progetto
     private void addMember(String projectName, String memberUsername)
             throws IllegalArgumentException, IOException {
         // Controllo validità dei parametri
@@ -528,11 +538,12 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
         if(response[0].equals("ok")){
             System.out.println(response[1]);
         }else {
-            //if(DEBUG) System.out.print("["+response[1]+"] ");
+            if (DEBUG) System.out.print("["+response[1]+"] ");
             System.out.println(response[2]);
         }
     }
 
+    // Elenca tutti i membri di un progetto di cui è membro
     private void showMembers(String projectName)
             throws IllegalArgumentException, IOException {
         // Controllo validità dei parametri
@@ -551,11 +562,12 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
                     System.out.println("\t- " + s);
             }
         }else {
-            //if(DEBUG) System.out.print("["+response[1]+"] ");
+            if (DEBUG) System.out.print("["+response[1]+"] ");
             System.out.println(response[2]);
         }
     }
 
+    // Aggiunge una nuova card ad un progetto di cui è membro
     private void addCard(String projectName, String cardName, String cardDescription)
             throws IllegalArgumentException, IOException {
         // Controllo validità dei parametri
@@ -568,12 +580,13 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
         if(response[0].equals("ok")){
             System.out.println(response[1]);
         }else {
-            //if(DEBUG) System.out.print("["+response[1]+"] ");
+            if (DEBUG) System.out.print("["+response[1]+"] ");
             System.out.println(response[2]);
         }
 
     }
 
+    // Visualizza una descrizione dettagliata di una specifica card di un progetto
     private void showCard(String projectName, String cardName)
             throws IllegalArgumentException, IOException {
         // Controllo validità dei parametri
@@ -586,30 +599,12 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
             System.out.println("Some information about the "+cardName+" card:");
             System.out.println(response[1]);
         }else {
-            //if(DEBUG) System.out.print("["+response[1]+"] ");
+            if (DEBUG) System.out.print("["+response[1]+"] ");
             System.out.println(response[2]);
         }
     }
 
-    private void listProjects() throws IOException {
-        sendRequest("listProjects "+username);
-        String[] response = readResponse();
-        if(response[0].equals("ok")){
-            System.out.println("These are the projects you are a member of:");
-            // Parso la lista inviata dal server
-            String[] projectsList = response[1].substring(1,response[1].length()-1).split(" ");
-            for (String s : projectsList) {
-                if (s.charAt(s.length() - 1) == ',')
-                    System.out.println("\t- " + s.substring(0, s.length() - 1));
-                else // Last member
-                    System.out.println("\t- " + s);
-            }
-        }else {
-            //if(DEBUG) System.out.print("["+response[1]+"] ");
-            System.out.println(response[2]);
-        }
-    }
-
+    // Visualizza tutte le cards di un progetto, eventualmente in forma tabellare
     private void showCards(String projectName, boolean table)
             throws IOException, IllegalArgumentException {
         // Controllo validità dei parametri
@@ -666,11 +661,12 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
             }
 
         }else {
-            //if(DEBUG) System.out.print("["+response[1]+"] ");
+            if (DEBUG) System.out.print("["+response[1]+"] ");
             System.out.println(response[2]);
         }
     }
 
+    // Sposta una card dalla sezione in cui si trova attualmente ad un'altra
     private void moveCard(String projectName, String cardName, String from, String to)
             throws IOException {
         if(projectName.isEmpty()) throw new IllegalArgumentException("projectName");
@@ -683,11 +679,12 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
         if(response[0].equals("ok")){
             System.out.println(response[1]);
         }else {
-            //if(DEBUG) System.out.print("["+response[1]+"] ");
+            if (DEBUG) System.out.print("["+response[1]+"] ");
             System.out.println(response[2]);
         }
     }
 
+    // Visualizza tutta la history di una card
     private void getCardHistory(String projectName, String cardName) throws IOException {
         if(projectName.isEmpty()) throw new IllegalArgumentException("projectName");
         if(cardName.isEmpty()) throw new IllegalArgumentException("cardName");
@@ -697,37 +694,13 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
             System.out.println("The history of the movements of the card "+cardName+" is:");
             System.out.println("\t"+response[1].substring(0,response[1].length()-1).replaceAll("\\|"," -> "));
         }else {
-            //if(DEBUG) System.out.print("["+response[1]+"] ");
+            if (DEBUG) System.out.print("["+response[1]+"] ");
             System.out.println(response[2]);
         }
 
     }
 
-    private void cancelProject(String projectName)
-            throws IOException,IllegalArgumentException {
-        if(projectName.isEmpty()) throw new IllegalArgumentException("projectName");
-        sendRequest("cancelProject "+username+" "+projectName);
-        String[] response = readResponse();
-        if(response[0].equals("ok")){
-            // Fermo il thread che sta in ascolto sulla chat di questo progetto
-            Thread chatListener = chatListeners.get(projectName);
-            chatListener.interrupt();
-            // Rimuovo dalle liste locali tutti i riferimenti al progetto appena cancellato
-            // La coda in cui sono immagazzinati i messaggi
-            chats.remove(projectName);
-            // Il task listener che si occupava di accodare i messaggi
-            chatListeners.remove(projectName);
-            // Il thread in ascolto sulla chat
-            projectMulticastIP.remove(projectName);
-            // Infine, stampo un messaggio di conferma
-            System.out.println(response[1]);
-
-        }else {
-            //if(DEBUG) System.out.print("["+response[1]+"] ");
-            System.out.println(response[2]);
-        }
-    }
-
+    // Legge i messaggi nella chat del progetto
     private void readChat(String projectName)
             throws ProjectNotFoundException {
         if(projectName.isEmpty()) throw new IllegalArgumentException("projectName");
@@ -742,6 +715,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
                 System.out.println(messagesQueue.poll());
     }
 
+    // Invia un nuovo messaggio sulla chat del progetto
     private void sendChatMsg(String projectName, String message)
             throws ProjectNotFoundException {
         if(projectName.isEmpty()) throw new IllegalArgumentException("projectName");
@@ -764,12 +738,62 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
 
     }
 
+    // Cancella il progetto se tutti i tasks sono stati svolti
+    private void cancelProject(String projectName)
+            throws IOException,IllegalArgumentException {
+        if(projectName.isEmpty()) throw new IllegalArgumentException("projectName");
+        sendRequest("cancelProject "+username+" "+projectName);
+        String[] response = readResponse();
+        if(response[0].equals("ok")){
+            // Fermo il thread che sta in ascolto sulla chat di questo progetto
+            Thread chatListener = chatListeners.get(projectName);
+            chatListener.interrupt();
+            // Rimuovo dalle liste locali tutti i riferimenti al progetto appena cancellato
+            // La coda in cui sono immagazzinati i messaggi
+            chats.remove(projectName);
+            // Il task listener che si occupava di accodare i messaggi
+            chatListeners.remove(projectName);
+            // Il thread in ascolto sulla chat
+            projectMulticastIP.remove(projectName);
+            // Infine, stampo un messaggio di conferma
+            System.out.println(response[1]);
+
+        }else {
+            if (DEBUG) System.out.print("["+response[1]+"] ");
+            System.out.println(response[2]);
+        }
+    }
+
+    // Elenca tutti gli utenti del sistema ed il loro stato
+    private void listUsers(){
+        // ○ == OFFLINE , ● == ONLINE
+        for(String user : usersStatus)
+            if(user.contains("OFFLINE"))
+                // Usare substring invece di split se metto prima lo status?
+                System.out.println("○ "+user.substring(8));
+            else
+                System.out.println("● "+user.substring(7));
+    }
+
+    // Elenca solo gli utenti del sistema attualmente ONLINE
+    private void listOnlineUsers(){
+        // ● == ONLINE
+        for(String user : usersStatus)
+            if(user.contains("ONLINE"))
+                System.out.println("● "+user.substring(7));
+    }
+
     // * UTILS
-    private void sendRequest(String request) throws IOException {
+
+    // Invia una richiesta al server
+    private void sendRequest(String request)
+            throws IOException {
         socketChannel.write(ByteBuffer.wrap((request).getBytes(StandardCharsets.UTF_8)));
     }
 
-    private String[] readResponse() throws IOException {
+    // Legge la risposta del server
+    private String[] readResponse()
+            throws IOException {
         // Alloco un buffer di <DIM_BUFFER>
         ByteBuffer msgBuffer = ByteBuffer.allocate(1024);
         // Stringa corrispondente alla risposta del server
@@ -794,18 +818,32 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
             // Finché ci sono bytes da leggere, continuo
         } while (bytesRead >= 1024);
 
-        //if(DEBUG) System.out.println("Server@WORTH < "+serverResponse.toString());
+        if (DEBUG) System.out.println("Server@WORTH < "+serverResponse.toString()+"\n");
         return serverResponse.toString().split(":");
     }
 
+    // Restituisce l'ora corrente in formato (HH:MM)
     private String getTime(){
         Calendar now = Calendar.getInstance();
         return String.format("(%02d:%02d)",
                 now.get(Calendar.HOUR_OF_DAY), now.get(Calendar.MINUTE));
     }
 
+    // * CALLBACKS
+
     @Override
-    public void notifyProject(String multicastInfo, String fromWho) throws RemoteException {
+    // Il server notifica il client in merito ad un evento generico
+    public void notifyEvent(String message)
+            throws RemoteException {
+        // Notifico l'utente e ripristino la shell
+        System.out.println("\n"+message);
+        System.out.print(username+"@WORTH > ");
+    }
+
+    @Override
+    // Il server notifica il client di essere stato aggiunto ad un progetto
+    public void notifyProject(String multicastInfo, String fromWho)
+            throws RemoteException {
         // L'utente è stato aggiunto ad un nuovo progetto e deve
         // sincronizzare le proprie informazioni multicast per
         // partecipare alla chat di progetto
@@ -839,14 +877,9 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
     }
 
     @Override
-    public void notifyEvent(String message) throws RemoteException {
-        // Notifico l'utente e ripristino la shell
-        System.out.println("\n"+message);
-        System.out.print(username+"@WORTH > ");
-    }
-
-    @Override
-    public void notifyUsers(List<String> users) throws RemoteException {
+    // Il server notifica il client con la lista degli utenti del sistema ed il loro stato
+    public void notifyUsers(List<String> users)
+            throws RemoteException {
         //System.out.println(users);
         // Preparo la lista di utenti per l'aggiornamento, eliminando tutti i vecchi record
         usersStatus.clear();
@@ -854,6 +887,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
         usersStatus.addAll(users);
     }
 
+    // * MAIN
     public static void main(String[] args){
         ClientMain client = new ClientMain();
         client.run();

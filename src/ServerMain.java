@@ -1,44 +1,43 @@
 // @author Luca Cirillo (545480)
 
-import WorthExceptions.*;
 import com.google.gson.*;
+import WorthExceptions.*;
 
-import java.io.IOException;
 import java.net.*;
+import java.util.*;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.*;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.rmi.RemoteException;
 import java.rmi.registry.Registry;
+import java.util.stream.Collectors;
 import java.rmi.server.RemoteObject;
 import java.rmi.AlreadyBoundException;
 import java.rmi.registry.LocateRegistry;
+import java.nio.charset.StandardCharsets;
 import java.rmi.server.UnicastRemoteObject;
-import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
 
-@SuppressWarnings("ReadWriteStringCanBeUsed")
-public class ServerMain extends RemoteObject implements Server, ServerRMI{
-
+public class ServerMain extends RemoteObject implements ServerRMI{
     // * TCP
     private static final int PORT_TCP = 6789;
     // * RMI
     private static final int PORT_RMI = 9876;
     private static final String NAME_RMI = "WORTH-SERVER";
+    // * PATHS
+    private static final Path pathMulticast = Paths.get("Multicast.json");
     // * SERVER
-    private final boolean DEBUG = true;
+    private static final boolean DEBUG = true;
+    private static final Random random = new Random();
+    private static final Gson gson = new Gson();
     private final List<User> users;
     private final Map<String, NotifyEventInterface> clients;
     private final Map<String, Project> projects;
-    private static final Gson gson = new Gson();
-    Random random = new Random();
-    // * PATHS
-    private static final Path pathMulticast = Paths.get("Multicast.json");
 
+    // Inizializza il sistema oppure ripristina l'ultima sessione
     public ServerMain(){
         // Callback
         super();
@@ -50,7 +49,7 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
         if(!Files.exists(pathMulticast)){
             try {
                 Files.write(pathMulticast,defaultMulticast.getBytes(StandardCharsets.UTF_8));
-            } catch (IOException e) {
+            } catch (IOException ioe) {
                 System.err.println("Failed to create default Multicast config file!");
                 System.exit(-1); }
         }
@@ -60,6 +59,7 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
         this.projects = new ConcurrentHashMap<>();
     }
 
+    // Server go live!
     private void live() {
         // Variabili da utilizzare nel try/catch
         Selector selector = null;
@@ -114,7 +114,7 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
                 Thread.sleep(300); // Limita overhead mentre debuggo
                 selector.select();
             } catch (IOException ioe) { ioe.printStackTrace(); break;
-            } catch (InterruptedException e) { e.printStackTrace(); }
+            } catch (InterruptedException ie) { ie.printStackTrace(); }
 
             // Iteratore sui canali che risultano pronti
             Iterator<SelectionKey> iterator = selector.selectedKeys().iterator();
@@ -156,9 +156,9 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
                                         // cmd[1] = username, nome utente del proprio account
                                         // cmd[2] = password, password del proprio account
                                         key.attach("ok:Great! Now your are logged as "+cmd[1]+"!:"+login(cmd[1], cmd[2]));
-                                    } catch (AuthFailException e) {
+                                    } catch (AuthenticationFailException afe) {
                                         key.attach("ko:401:The password you entered is incorrect, please try again");
-                                    } catch (UserNotFoundException e) {
+                                    } catch (UserNotFoundException unfe) {
                                         key.attach("ko:404:Are you sure that an account with this name exists?\nIf you need one, use register command");
                                     }
                                     break;
@@ -168,7 +168,7 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
                                         // cmd[1] = username, nome utente del proprio account
                                         logout(cmd[1]);
                                         key.attach("ok:You have been logged out successfully");
-                                    } catch (UserNotFoundException e) {
+                                    } catch (UserNotFoundException unfe) {
                                         // In teoria, non può succedere per via di come il client è stato implementato
                                         key.attach("ko:404:Are you sure that an account with this name exists?\nIf you need one, use register command");
                                     }
@@ -181,7 +181,7 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
                                         key.attach("ok:Project "+cmd[2]+" created!\nCurrently you're the only member. " +
                                                 "Try use addMember to invite some coworkers:"
                                                 +createProject(cmd[1],cmd[2]));
-                                    } catch (ProjectNameAlreadyInUse e) {
+                                    } catch (ProjectNameAlreadyInUse pnaiue) {
                                         key.attach("ko:409:The name chosen for the project is already in use, try another one!");
                                     } catch (MulticastException e) {
                                         e.printStackTrace();
@@ -195,16 +195,16 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
                                         // cmd[3] = memberUsername, username dell'utente da inserire
                                         addMember(cmd[1],cmd[2],cmd[3]);
                                         key.attach("ok:"+cmd[3]+" added to "+cmd[2]+"!");
-                                    } catch (ForbiddenException e) {
+                                    } catch (ForbiddenException fe) {
                                         key.attach("ko:403:You're not member of this project");
-                                    } catch (ProjectNotFoundException e) {
+                                    } catch (ProjectNotFoundException pnfe) {
                                         key.attach("ko:404:Can't found "+cmd[2]+", are you sure that exists? Try createProject to create a project");
-                                    } catch (UserNotFoundException e) {
+                                    } catch (UserNotFoundException unfe) {
                                         key.attach("ko:404:Can't found an account named "+cmd[3]+"! Maybe is a typo?");
-                                    } catch (AlreadyMemberException e) {
+                                    } catch (AlreadyMemberException ame) {
                                         key.attach("ko:409:" + cmd[3] + " is already a member of " + cmd[2]);
-                                    } catch (RemoteException e){
-                                        key.attach("ko:500:Project created, but failed to update local chat information. Please login and logout again to properly user project chat!");
+                                    } catch (RemoteException re){
+                                        key.attach("ko:500:Project created, but failed to update local chat information. Please login and logout again to properly use project chat!");
                                     }
                                     break;
 
@@ -213,9 +213,9 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
                                         // cmd[1] = username, nome utente del proprio account
                                         // cmd[2] = projectName, nome del progetto
                                         key.attach("ok:"+showMembers(cmd[1], cmd[2]));
-                                    } catch (ForbiddenException e) {
+                                    } catch (ForbiddenException fe) {
                                         key.attach("ko:403:You're not member of this project");
-                                    } catch (ProjectNotFoundException e) {
+                                    } catch (ProjectNotFoundException pnfe) {
                                         key.attach("ko:404:Can't found "+cmd[2]+", are you sure that exists? Try createProject to create a project");
                                     }
                                     break;
@@ -228,11 +228,11 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
                                         // cmd[4] = cardDescription, descrizione testuale della card
                                         addCard(cmd[1],cmd[2],cmd[3],cmd[4]);
                                         key.attach("ok:Card "+cmd[3]+" created");
-                                    } catch (ForbiddenException e) {
+                                    } catch (ForbiddenException fe) {
                                         key.attach("ko:403:You're not member of this project");
-                                    } catch (ProjectNotFoundException e) {
+                                    } catch (ProjectNotFoundException pnfe) {
                                         key.attach("ko:404:Can't found "+cmd[2]+", are you sure that exists? Try createProject to create a project");
-                                    } catch (CardAlreadyExists cardAlreadyExists) {
+                                    } catch (CardAlreadyExists cae) {
                                         key.attach("ko:409:A card with the same name already exists");
                                     }
                                     break;
@@ -243,11 +243,11 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
                                         // cmd[2] = projectName, nome del progetto
                                         // cmd[3] = cardName, nome della card
                                         key.attach("ok:"+showCard(cmd[1],cmd[2],cmd[3]));
-                                    } catch (ForbiddenException e) {
+                                    } catch (ForbiddenException fe) {
                                         key.attach("ko:403:You're not member of this project");
-                                    } catch (ProjectNotFoundException e) {
+                                    } catch (ProjectNotFoundException pnfe) {
                                         key.attach("ko:404:Can't found "+cmd[2]+", are you sure that exists? Try createProject to create a project");
-                                    } catch (CardNotFoundException e) {
+                                    } catch (CardNotFoundException cnfe) {
                                         key.attach("ko:404:Can't found "+cmd[3]+", are you sure that exists? Try addCard to create a card");
                                     }
                                     break;
@@ -257,9 +257,9 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
                                         // cmd[1] = username, nome utente del proprio account
                                         // cmd[2] = projectName, nome del progetto
                                         key.attach("ok:"+showCards(cmd[1],cmd[2]));
-                                    } catch (ForbiddenException e) {
+                                    } catch (ForbiddenException fe) {
                                         key.attach("ko:403:You're not member of this project");
-                                    } catch (ProjectNotFoundException e) {
+                                    } catch (ProjectNotFoundException pnfe) {
                                         key.attach("ko:404:Can't found "+cmd[2]+", are you sure that exists? Try createProject to create a project");
                                     }
                                     break;
@@ -273,14 +273,14 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
                                         // cmd[5] = to, lista in cui si desidera spostare la card
                                         moveCard(cmd[1],cmd[2],cmd[3],cmd[4],cmd[5]);
                                         key.attach("ok:"+cmd[3]+" moved from "+cmd[4]+" to "+cmd[5]);
-                                    } catch (IllegalCardMovementException e) {
-                                        key.attach("ko:406:You can't move a card from "+cmd[4]+" to "+cmd[5]);
-                                    } catch (ForbiddenException e) {
+                                    } catch (ForbiddenException fe) {
                                         key.attach("ko:403:You're not member of this project");
-                                    } catch (CardNotFoundException e) {
-                                        key.attach("ko:404:Can't found "+cmd[3]+", are you sure that exists? Try addCard to create a card");
-                                    } catch (ProjectNotFoundException e) {
+                                    } catch (ProjectNotFoundException pnfe) {
                                         key.attach("ko:404:Can't found "+cmd[2]+", are you sure that exists? Try createProject to create a project");
+                                    } catch (CardNotFoundException cnfe) {
+                                        key.attach("ko:404:Can't found "+cmd[3]+", are you sure that exists? Try addCard to create a card");
+                                    } catch (IllegalCardMovementException icme) {
+                                        key.attach("ko:406:You can't move a card from "+cmd[4]+" to "+cmd[5]);
                                     }
                                     break;
 
@@ -289,12 +289,13 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
                                         // cmd[1] = username, nome utente del proprio account
                                         // cmd[2] = projectName, nome del progetto
                                         // cmd[3] = cardName, nome della card
+                                        // cmd[3] = cardName, nome della card
                                         key.attach("ok:"+getCardHistory(cmd[1],cmd[2],cmd[3]));
-                                    } catch (ForbiddenException e) {
+                                    } catch (ForbiddenException fe) {
                                         key.attach("ko:403:You're not member of this project");
-                                    } catch (ProjectNotFoundException e) {
+                                    } catch (ProjectNotFoundException pnfe) {
                                         key.attach("ko:404:Can't found "+cmd[2]+", are you sure that exists? Try createProject to create a project");
-                                    } catch (CardNotFoundException e) {
+                                    } catch (CardNotFoundException cnfe) {
                                         key.attach("ko:404:Can't found "+cmd[3]+", are you sure that exists? Try addCard to create a card");
                                     }
                                     break;
@@ -303,7 +304,7 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
                                     try{
                                         // cmd[1] = username, nome utente del proprio account
                                         key.attach("ok:"+listProjects(cmd[1]));
-                                    } catch (ProjectNotFoundException e) {
+                                    } catch (ProjectNotFoundException pnfe) {
                                         key.attach("ko:404:You are not a member of any project, yet");
                                     }
                                     break;
@@ -312,12 +313,12 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
                                     try{
                                         cancelProject(cmd[1],cmd[2]);
                                         key.attach("ok:Project "+cmd[2]+" was canceled");
-                                    } catch (ForbiddenException e) {
+                                    } catch (ForbiddenException fe) {
                                         key.attach("ko:403:You're not member of this project");
-                                    } catch (PendingCardsException e) {
-                                        key.attach("ko:412:Not all cards are in the done list. There is still work to be done!");
-                                    } catch (ProjectNotFoundException e) {
+                                    } catch (ProjectNotFoundException pnfe) {
                                         key.attach("ko:404:Can't found "+cmd[2]+", are you sure that exists? Try createProject to create a project");
+                                    } catch (PendingCardsException pce) {
+                                        key.attach("ko:412:Not all cards are in the done list. There is still work to be done!");
                                     }
 
                             }
@@ -342,7 +343,7 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
                             key.interestOps(SelectionKey.OP_READ);
                         }
                     }
-                } catch (IOException e) { e.printStackTrace(); }
+                } catch (IOException ioe) { ioe.printStackTrace(); }
             }
         }
     }
@@ -367,12 +368,12 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
         // Aggiorno tutti gli altri clients con una callback
         // per informarli che un nuovo si è registrato, e risulta quindi offline
         try { sendCallback(); }
-        catch (RemoteException e) { e.printStackTrace(); }
+        catch (RemoteException re) { re.printStackTrace(); }
     }
 
-    // Permette ad un utente di utilizzare il sistema
+    // Permette ad un utente di utilizzare il sistema, segnando il suo stato come ONLINE
     private String login(String username, String password)
-            throws UserNotFoundException, AuthFailException {
+            throws UserNotFoundException, AuthenticationFailException {
         if(DEBUG) System.out.println("Server@WORTH > login "+username+" "+password);
 
         // Controllo l'esistenza dell'utente
@@ -382,7 +383,7 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
         User user = getUser(username);
 
         // Controllo se la password è corretta
-        if(!user.auth(password)) throw new AuthFailException(password);
+        if(!user.auth(password)) throw new AuthenticationFailException(password);
 
         // Aggiorno il suo stato su Online
         user.setStatus(User.Status.ONLINE);
@@ -391,7 +392,7 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
         // Aggiorno tutti gli altri clients con una callback
         // per informarli che l'utente è online
         try { sendCallback(); }
-        catch (RemoteException e) { e.printStackTrace(); }
+        catch (RemoteException re) { re.printStackTrace(); }
 
         // Ritorno le informazioni Multicast su tutti i
         // (eventuali) progetti di cui l'utente è membro
@@ -404,7 +405,7 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
 
     }
 
-    // Utente abbandona correttamente il sistema
+    // Un utente abbandona il sistema, ed il suo stato passa su OFFLINE
     private void logout(String username)
             throws UserNotFoundException {
 
@@ -422,10 +423,22 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
         // Aggiorno tutti gli altri clients con una callback
         // per informarli che l'utente è ora offline
         try { sendCallback(); }
-        catch (RemoteException e) {e.printStackTrace();}
+        catch (RemoteException re) {re.printStackTrace();}
     }
 
-    // Utente richiede la creazione di un nuovo progetto
+    // Restituisce la lista dei progetto di cui l'utente ne è membro
+    private String listProjects(String username)
+            throws ProjectNotFoundException {
+        if(DEBUG) System.out.println("Server@WORTH > listProjects "+username);
+
+        List<Project> list = getUser(username).getProjects();
+        if(list.size() == 0) throw new ProjectNotFoundException(username);
+        return list.stream()
+                .map(Project::getName)
+                .collect(Collectors.toList()).toString();
+    }
+
+    // Un utente richiede la creazione di un nuovo progetto
     private String createProject(String username, String projectName)
             throws ProjectNameAlreadyInUse, MulticastException { // TODO usare un altra eccezione per il multicast error
 
@@ -444,6 +457,7 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
         return project.getMulticastInfo();
     }
 
+    // Un utente membro di un progetto richiede di aggiungere un nuovo membro
     private void addMember(String username, String projectName, String memberUsername)
             throws ProjectNotFoundException, UserNotFoundException, AlreadyMemberException, ForbiddenException, RemoteException {
 
@@ -473,6 +487,7 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
         clients.get(memberUsername).notifyProject(project.getMulticastInfo(), username);
     }
 
+    // Restituisce la lista dei membri che fanno parte di un progetto
     private String showMembers(String username, String projectName)
             throws ProjectNotFoundException, ForbiddenException {
 
@@ -490,6 +505,7 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
         else throw new ForbiddenException();
     }
 
+    // Un membro di un progetto aggiunge ad esso una nuova card
     private void addCard(String username, String projectName, String cardName, String cardDescription)
             throws ProjectNotFoundException, ForbiddenException, CardAlreadyExists {
 
@@ -508,6 +524,7 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
 
     }
 
+    // Restituisce le informazioni su una card di un progetto
     private String showCard(String username, String projectName, String cardName)
             throws CardNotFoundException, ForbiddenException, ProjectNotFoundException {
         if(DEBUG) System.out.println("Server@WORTH > showCard "+username+" "+projectName+" "+cardName);
@@ -524,17 +541,7 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
         return card.toString();
     }
 
-    private String listProjects(String username)
-            throws ProjectNotFoundException {
-        if(DEBUG) System.out.println("Server@WORTH > listProjects "+username);
-
-        List<Project> list = getUser(username).getProjects();
-        if(list.size() == 0) throw new ProjectNotFoundException(username);
-        return list.stream()
-                .map(Project::getName)
-                .collect(Collectors.toList()).toString();
-    }
-
+    // Ritorna la lista delle cards presenti in un progetto
     private String showCards(String username, String projectName)
             throws ProjectNotFoundException, ForbiddenException {
         if(DEBUG) System.out.println("Server@WORTH > showCards "+username+" "+projectName);
@@ -559,6 +566,7 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
         return output.substring(0,output.length()-1);
     }
 
+    // Sposta una card dalla sezione in cui si trova attualmente ad un'altra
     private void moveCard(String username, String projectName, String cardName, String from, String to)
             throws ProjectNotFoundException, ForbiddenException, CardNotFoundException, IllegalCardMovementException {
         // Controllare che il progetto esista
@@ -586,20 +594,15 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
             new DatagramSocket().send(new DatagramPacket(
                     message.getBytes(StandardCharsets.UTF_8), message.length(),
                     InetAddress.getByName(project.getMulticastIP()), project.getMulticastPort()));
-        } catch (UnknownHostException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
+        } catch (UnknownHostException uhe) {
+            System.out.println("I'm not sure if I have the correct address for the project "+projectName+", I can't notify all other members for now, sorry.");
+        } catch (IOException ioe) {
+            System.out.println("There was an error trying to notify all other members.");
         }
 
     }
 
-    private String getTime(){
-        Calendar now = Calendar.getInstance();
-        return String.format("(%02d:%02d)",
-                now.get(Calendar.HOUR_OF_DAY), now.get(Calendar.MINUTE));
-    }
-
+    // Restituisce la history di una card
     private String getCardHistory(String username, String projectName, String cardName)
             throws CardNotFoundException, ForbiddenException, ProjectNotFoundException {
         // Controllare che il progetto esista
@@ -616,6 +619,7 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
         return project.getCard(cardName).getHistory();
     }
 
+    // Cancella il progetto se tutti i tasks sono stati svolti
     private void cancelProject(String username, String projectName)
             throws ProjectNotFoundException, ForbiddenException, PendingCardsException {
         // Controllare che il progetto esista
@@ -637,30 +641,15 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
                 user.removeProject(project);
                 try { clients.get(user.getUsername()).notifyEvent(
                         "Ding! "+username+" ha cancellato il progetto "+projectName);
-                } catch (RemoteException e) {e.printStackTrace();}
+                } catch (RemoteException re) {re.printStackTrace();}
             }
             // Rimuovo il progetto dalla lista globale
             projects.remove(projectName);
         }else throw new PendingCardsException();
     }
-    private void saveReleasedIP(String IP) throws MulticastException {
-        // Carico in memoria il file Multicast.json
-        String multicast = null;
-        try { multicast = new String(Files.readAllBytes(pathMulticast));
-        } catch (IOException e) { throw new MulticastException(); }
-        // Parso la stringa JSON con Gson
-        JsonObject multicastJson = new JsonParser().parse(multicast).getAsJsonObject();
-        // "Seleziono" la lista degli IP che si sono liberati
-        JsonArray releasedIP = (JsonArray) multicastJson.get("releasedIP");
-        // Aggiungo il nuovo IP appena rilasciato da un progetto
-        releasedIP.add(IP);
-        // Rimetto la lista nel JSON
-        multicastJson.add("releasedIP",releasedIP);
-        // Salvo tutto nuovamente su file
-        try { Files.write(pathMulticast,multicastJson.toString().getBytes(StandardCharsets.UTF_8));
-        } catch (IOException e) { throw new MulticastException(); }
-    }
+
     // * UTILS
+
     // Legge la richiesta inviata dal client
     private String readRequest(SocketChannel client) throws IOException {
         // Alloco un buffer di <DIM_BUFFER>
@@ -696,13 +685,21 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
         return users.stream().anyMatch(user -> user.getUsername().equals(username));
     }
 
-    // Recupera l'utente <username>
+    // Ritorna il riferimento ad uno specifico utente
     private User getUser(String username){
         for(User user: users)
             if(user.getUsername().equals(username)) return user;
         return null;
     }
 
+    // Restituisce l'ora corrente in formato (HH:MM)
+    private String getTime(){
+        Calendar now = Calendar.getInstance();
+        return String.format("(%02d:%02d)",
+                now.get(Calendar.HOUR_OF_DAY), now.get(Calendar.MINUTE));
+    }
+
+    // Genera un indirizzo IP multicast, sia esso nuovo o riutilizzato
     private String genMulticastIP() throws MulticastException {
         // 224.0.0.1 -> 239.255.255.255
         String multicastIP = "";
@@ -765,8 +762,30 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
         if(DEBUG) System.out.println(multicastJson.toString());
         return multicastIP;
     }
+
+    // Aggiunge l'indirizzo IP multicast alla lista degli indirizzi rilasciati
+    private void saveReleasedIP(String IP) throws MulticastException {
+        // Carico in memoria il file Multicast.json
+        String multicast = null;
+        try { multicast = new String(Files.readAllBytes(pathMulticast));
+        } catch (IOException e) { throw new MulticastException(); }
+        // Parso la stringa JSON con Gson
+        JsonObject multicastJson = new JsonParser().parse(multicast).getAsJsonObject();
+        // "Seleziono" la lista degli IP che si sono liberati
+        JsonArray releasedIP = (JsonArray) multicastJson.get("releasedIP");
+        // Aggiungo il nuovo IP appena rilasciato da un progetto
+        releasedIP.add(IP);
+        // Rimetto la lista nel JSON
+        multicastJson.add("releasedIP",releasedIP);
+        // Salvo tutto nuovamente su file
+        try { Files.write(pathMulticast,multicastJson.toString().getBytes(StandardCharsets.UTF_8));
+        } catch (IOException e) { throw new MulticastException(); }
+    }
+
     // * CALLBACKS
+
     @Override
+    // Iscrive il client alla ricezione di eventi tramite callback
     public synchronized void registerCallback(String username, NotifyEventInterface clientInterface)
             throws RemoteException {
         if(!clients.containsKey(username)) {
@@ -781,10 +800,14 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
     }
 
     @Override
-    public synchronized void unregisterCallback(String username, NotifyEventInterface clientInterface) throws RemoteException {
+    // Disiscrive il client dalla ricezione di eventi tramite callback
+    public synchronized void unregisterCallback(String username, NotifyEventInterface clientInterface)
+            throws RemoteException {
         clients.remove(username, clientInterface);
     }
 
+    // Invia a tutti i clients registrati al servizio di callback
+    // informazioni sugli utenti e sul loro stato
     public synchronized void sendCallback() throws RemoteException{
         // Lista di stringhe che riporta lo stato di ogni utente del sistema
         List<String> usersStatus = new LinkedList<>();
@@ -803,7 +826,6 @@ public class ServerMain extends RemoteObject implements Server, ServerRMI{
         // invio la lista di utenti ed il loro stato
         for(Map.Entry<String, NotifyEventInterface> client : clients.entrySet())
             client.getValue().notifyUsers(usersStatus);
-
     }
 
     // * MAIN

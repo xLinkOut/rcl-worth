@@ -12,11 +12,12 @@ public interface ServerRMI extends Remote {
     void register(String username, String password)
             throws RemoteException, UsernameAlreadyTakenException;
 
-    // "Abbona" il client alla ricezione di eventi tramite callbacks
+    // Iscrive il client alla ricezione di eventi tramite callback
     void registerCallback(String username, NotifyEventInterface clientInterface)
         throws RemoteException;
 
-    // "Disiscrive" il client dalla ricezione di eventi tramite callback
+    // Disiscrive il client dalla ricezione di eventi tramite callback
     void unregisterCallback(String username, NotifyEventInterface clientInterface)
         throws RemoteException;
+
 }
