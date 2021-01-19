@@ -1,43 +1,39 @@
-import com.fasterxml.jackson.annotation.JsonCreator;
+// @author Luca Cirillo (545480)
+
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import java.util.ArrayList;
-import java.util.List;
-
+// Identifica un utente del sistema WORTH
 public class User {
 
-    public enum Status { OFFLINE, ONLINE } // 0 = Offline, 1 = Online
+    // Possibili stati dell'utente
+    public enum Status { OFFLINE, ONLINE }
 
-    private final String username;
-    private final String password;
-    @JsonIgnore
-    private Status status = Status.OFFLINE; // All'avvio del sistema è di default a Offline
-    //private final List<Project> projects;
+    private final String username; // Username dell'utente, univoco nel sistema
+    private final String password; // Password dell'utente
+    @JsonIgnore // Informazione che non deve persistere, sempre offline all'avvio
+    private Status status = Status.OFFLINE; // Stato dell'utente
 
-    // TODO: hash password
 
-    @JsonCreator
+    @JsonCreator // Costruttore per Jackson
     public User(@JsonProperty("username") String username,
                 @JsonProperty("password") String password){
         this.username = username;
         this.password = password;
-        //this.projects = new ArrayList<>();
     }
 
-    public String getUsername() { return username; }
+    // Getters
+    public String getUsername() { return this.username; }
+    public String getPassword() { return this.password; }
+    public Status getStatus() { return this.status; }
 
-    public String getPassword() { return password; }
-
-    public Status getStatus() { return status; }
-
+    // Setters
     public void setStatus(Status status) { this.status = status; }
 
+    // Authentication
     public boolean auth(String password){
         return this.password.equals(password);
     }
 
-    //public void addProject(Project project){ this.projects.add(project); }
-    //public List<Project> getProjects(){ return this.projects; }
-    //public void removeProject(Project project) { this.projects.remove(project); }
 }
