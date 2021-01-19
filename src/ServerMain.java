@@ -64,8 +64,8 @@ public class ServerMain extends RemoteObject implements ServerRMI{
             // probabilmente è il primo avvio del sistema
             if(Files.notExists(pathData)){
                 if (DEBUG) System.out.println("System bootstrap");
-                // Costruisco l'albero di directory ed
-                // i file config di default
+                // Costruisco l'albero di directories
+                // e creo i files config di default
                 // data/
                 Files.createDirectory(pathData);
                 // data/Projects/
@@ -525,7 +525,7 @@ public class ServerMain extends RemoteObject implements ServerRMI{
 
     // Un utente richiede la creazione di un nuovo progetto
     private String createProject(String username, String projectName)
-            throws ProjectNameAlreadyInUse, MulticastException { // TODO usare un altra eccezione per il multicast error
+            throws ProjectNameAlreadyInUse, MulticastException {
 
         if(DEBUG) System.out.println("Server@WORTH > createProject "+username+" "+projectName);
 
@@ -538,6 +538,19 @@ public class ServerMain extends RemoteObject implements ServerRMI{
         projects.put(projectName, project);
         //user.addProject(project);
         // TODO: eliminare se si riesce a togliere la dipendenza da user.projects
+
+        // Scrivo su disco tutti i dettagli del progetto
+        try {
+            Path projectPath = Paths.get(pathProjects.toString()+"/"+projectName);
+            Path projectConfigPath = Paths.get(projectPath.toString()+"/"+projectName+".json");
+            Files.createDirectory(projectPath);
+            Files.createFile(projectConfigPath);
+            jacksonMapper.writeValue(Files.newBufferedWriter(projectConfigPath),project);
+        } catch (IOException e) {
+            // TODO: notificare l'utente dell'errore, probailmente il nome collide con i criteri del filesystem
+            System.out.println("An error occurred trying to save the project "+projectName+" to the file system!");
+        }
+
         try {
             jacksonMapper.writeValue(Files.newBufferedWriter(pathUsers), users);
         } catch (IOException ioe) {
