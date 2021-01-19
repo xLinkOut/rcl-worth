@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.gson.*;
 import WorthExceptions.*;
 
+import java.io.File;
 import java.net.*;
 import java.util.*;
 import java.io.IOException;
@@ -23,6 +24,7 @@ import java.rmi.registry.LocateRegistry;
 import java.nio.charset.StandardCharsets;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Stream;
 
 @SuppressWarnings("ReadWriteStringCanBeUsed")
 public class ServerMain extends RemoteObject implements ServerRMI{
@@ -547,7 +549,7 @@ public class ServerMain extends RemoteObject implements ServerRMI{
             Files.createFile(projectConfigPath);
             jacksonMapper.writeValue(Files.newBufferedWriter(projectConfigPath),project);
         } catch (IOException e) {
-            // TODO: notificare l'utente dell'errore, probailmente il nome collide con i criteri del filesystem
+            // TODO: notificare l'utente dell'errore, probabilmente il nome collide con i criteri del filesystem
             System.out.println("An error occurred trying to save the project "+projectName+" to the file system!");
         }
 
@@ -751,19 +753,33 @@ public class ServerMain extends RemoteObject implements ServerRMI{
             // e notifica subito l'utente dell'evento
             for(User user : project.getMembers()) {
                 //user.removeProject(project);
+                //try {
+                //    jacksonMapper.writeValue(Files.newBufferedWriter(pathUsers), users);
+                //} catch (IOException ioe) {
+                //    if (DEBUG) ioe.printStackTrace();
+                //    System.err.println("I was unable to save user information on the filesystem, on next restart they will probably be lost ...");
+                //}
                 // TODO: eliminare se si riesce a togliere la dipendenza da user.projects
-                try {
-                    jacksonMapper.writeValue(Files.newBufferedWriter(pathUsers), users);
-                } catch (IOException ioe) {
-                    if (DEBUG) ioe.printStackTrace();
-                    System.err.println("I was unable to save user information on the filesystem, on next restart they will probably be lost ...");
-                }
+                // TODO: non inviare la notifica alla stessa persona che ha cancellato il progetto
                 try { clients.get(user.getUsername()).notifyEvent(
                         "Ding! "+username+" ha cancellato il progetto "+projectName);
                 } catch (RemoteException re) {re.printStackTrace();}
             }
             // Rimuovo il progetto dalla lista globale
             projects.remove(projectName);
+            // Rimuovo tutti i riferimenti sul filesystem
+            // https://stackoverflow.com/questions/35988192/java-nio-most-concise-recursive-directory-delete
+            try {
+                Path projectPath = Paths.get(pathProjects.toString()+"/"+projectName);
+                Files.walk(projectPath)
+                        .sorted(Comparator.reverseOrder())
+                        .map(Path::toFile)
+                        .peek(System.out::println)
+                        .forEach(File::delete);
+            } catch (IOException e) {
+                // TODO: avviso
+                e.printStackTrace();
+            }
         }else throw new PendingCardsException();
     }
 
