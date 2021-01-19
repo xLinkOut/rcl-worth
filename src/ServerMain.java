@@ -1,10 +1,8 @@
 // @author Luca Cirillo (545480)
 
-import com.fasterxml.jackson.core.JsonGenerationException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.InjectableValues;
-import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.gson.*;
 import WorthExceptions.*;
@@ -13,11 +11,11 @@ import java.io.File;
 import java.net.*;
 import java.util.*;
 import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.ByteBuffer;
 import java.nio.channels.*;
 import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.rmi.RemoteException;
 import java.rmi.registry.Registry;
 import java.util.stream.Collectors;
@@ -27,7 +25,6 @@ import java.rmi.registry.LocateRegistry;
 import java.nio.charset.StandardCharsets;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Stream;
 
 @SuppressWarnings("ReadWriteStringCanBeUsed")
 public class ServerMain extends RemoteObject implements ServerRMI{
@@ -99,8 +96,6 @@ public class ServerMain extends RemoteObject implements ServerRMI{
                     // Rimuovo il primo elemento, che corrisponde proprio alla cartella "data/Projects/"
                     subfolders.remove(0);
 
-                    System.out.println(subfolders.toString());
-
                     // Per ogni progetto presente, ne ricostruisco la struttura
                     for(Path projectFolder : subfolders){
                         // Mantengo il path diretto al file config del progetto
@@ -109,18 +104,14 @@ public class ServerMain extends RemoteObject implements ServerRMI{
                         // il progetto è corrotto e non posso ricostruirlo;
                         // provvedo quindi ad eliminarlo dal disco
                         if(Files.notExists(projectConfigFile)){
-                            try {
-                                Files.walk(projectFolder)
-                                        .sorted(Comparator.reverseOrder())
-                                        .map(Path::toFile)
-                                        //.peek(System.out::println)
-                                        .forEach(File::delete);
+                            try {Files.walk(projectFolder)
+                                    .sorted(Comparator.reverseOrder())
+                                    .map(Path::toFile)
+                                    .forEach(File::delete);
                                 Files.delete(projectFolder);
-                            } catch (IOException e) {
-                                // TODO: avviso
-                                e.printStackTrace();
-                            }
+                            } catch (IOException ignored){}
                         }
+
                         // Elenco tutti i files nella cartella, relativi alle card
                         List<Path> projectFiles = Files.walk(projectFolder, 1)
                                 .filter(Files::isRegularFile)
@@ -130,22 +121,25 @@ public class ServerMain extends RemoteObject implements ServerRMI{
 
                         // Carico in memoria le cards
                         List<Card> cards = new ArrayList<>();
-                        for(Path cardFile : projectFiles){
+                        for(Path cardFile : projectFiles)
                             cards.add(jacksonMapper.readValue(Files.newBufferedReader(cardFile),Card.class));
-                        }
 
-                        // Carico la struttura del progetto
+                        // Carico in memoria il progetto
+                        // Comando di Jackson che permette di "iniettare" oggetti esterni durante
+                        // la deserializzazione di un file json
                         jacksonMapper.setInjectableValues(new InjectableValues.Std().addValue("cards",cards));
-                        System.out.println(projectFolder.getFileName().toString());
-                        projects.put(projectFolder.getFileName().toString(),jacksonMapper.readValue(Files.newBufferedReader(projectConfigFile),Project.class));
-                        System.out.println(projects.get(projectFolder.getFileName().toString()));
+                        projects.put(
+                                projectFolder.getFileName().toString(), // Nome del progetto
+                                jacksonMapper.readValue(Files.newBufferedReader(projectConfigFile),Project.class)
+                        );
                     }
-
+                    if (DEBUG) System.out.println("Loaded "+this.projects.size()+" projects");
                 }else{
                     // Altrimenti creo la cartella per contenere i futuri progetti
                     Files.createDirectory(pathProjects);
                     // Ed inizializzo la struttura dati senza caricare nulla
                     this.projects = new ConcurrentHashMap<>();
+                    if (DEBUG) System.out.println("No projects found");
                 }
 
                 // Se "data/Users.json" esiste e non è vuoto, carico in memoria la lista di utenti registrati
@@ -153,10 +147,11 @@ public class ServerMain extends RemoteObject implements ServerRMI{
                     this.users = jacksonMapper.readValue(
                             Files.newBufferedReader(pathUsers),
                             new TypeReference<List<User>>(){});
-                    if (DEBUG) System.out.println(this.users.toString());
-                // Altrimenti inizializzo la struttura dati vuota
+                    if (DEBUG) System.out.println("Loaded "+this.users.size()+" users");
                 }else{
+                    // Altrimenti inizializzo la struttura dati vuota
                     this.users = new ArrayList<>();
+                    if (DEBUG) System.out.println("No users found");
                 }
 
                 // Se il "data/Multicast.json" non esiste oppure è vuoto, ne creo uno di default

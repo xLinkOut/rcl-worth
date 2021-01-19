@@ -1,20 +1,24 @@
 // @author Luca Cirillo (545480)
 
-import WorthExceptions.CardNotFoundException;
-import WorthExceptions.IllegalCardMovementException;
-import com.fasterxml.jackson.annotation.JacksonInject;
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonProperty;
-
 import java.util.List;
 import java.util.ArrayList;
 
+// Jackson
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JacksonInject;
+
+import WorthExceptions.CardNotFoundException;
+import WorthExceptions.IllegalCardMovementException;
+
+// Identifica un progetto creato sul sistema da un utente
 public class Project {
 
+    // Liste in cui si possono collocare le cards
     public enum Section { TODO, INPROGRESS, TOBEREVISED, DONE }
 
-    private final String name;          // Nome del progetto
+    private final String name;            // Nome del progetto, univoco nel sistema
     private final List<String> members;   // Utenti membri del progetto
 
     private final List<Card> todo;        // Cards nella lista TODO
@@ -25,7 +29,7 @@ public class Project {
     private final String multicastIP;     // Indirizzo IP multicast della chat di progetto
     private final int multicastPort;      // Porta della chat di progetto
 
-    @JsonCreator
+    @JsonCreator // Costruttore di Jackson
     public Project(
             @JsonProperty("name") String name,
             @JsonProperty("members") List<String> members,
@@ -41,28 +45,27 @@ public class Project {
         this.inProgress = new ArrayList<>();
         this.toBeRevised = new ArrayList<>();
         this.done = new ArrayList<>();
-        for(Card card : cards){
-            getList(card.getSection()).add(card);
-        }
+        for(Card card : cards) getList(card.getSection()).add(card);
     }
 
     public Project(String name, String owner, String multicastIP, int multicastPort){
         this.name = name;
         this.members = new ArrayList<>();
+        this.members.add(owner);
         this.todo = new ArrayList<>();
         this.inProgress = new ArrayList<>();
         this.toBeRevised = new ArrayList<>();
         this.done = new ArrayList<>();
-        this.members.add(owner);
         this.multicastIP = multicastIP;
         this.multicastPort = multicastPort;
     }
 
-    public String getName() { return name; }
-    public List<String> getMembers(){
-        return members;
-    }
+    // Getters
+    public String getName() { return this.name; }
 
+    public List<String> getMembers(){ return this.members; }
+
+    // Cerca una card nel progetto quando non si conosce la lista di appartenenza
     public Card getCard(String name){
         for(Card card : todo)
             if(card.getName().equals(name)) return card;
@@ -79,6 +82,7 @@ public class Project {
         return null;
     }
 
+    // Cerca una card nel progetto in una specifica lista
     public Card getCard(String name, Section section){
         List<Card> list;
         // Enhanced switch in java 13
@@ -102,6 +106,13 @@ public class Project {
         return card.getHistory();
     }
 
+    public String getMulticastIP(){ return this.multicastIP; }
+
+    public int getMulticastPort() { return this.multicastPort; }
+
+    @JsonIgnore // E' solo una scorciatoia per altri metodi, non deve persistere sul sistema
+    public String getMulticastInfo(){ return "["+this.name+","+this.multicastIP+","+this.multicastPort+"]"; }
+
     public List<Card> getList(Section section){
         // TODO CAMBIARE
         switch (section){
@@ -113,24 +124,10 @@ public class Project {
         }
     }
 
-    public String getMulticastIP(){
-        return this.multicastIP;
-    }
+    // Aggiunge un nuovo utente come membro del progetto
+    public void addMember(String member){ if(!members.contains(member)) members.add(member); }
 
-    public int getMulticastPort() { return this.multicastPort; }
-
-    @JsonIgnore // E' solo una scorciatoia per altri metodi, non deve persistere sul sistema
-    public String getMulticastInfo(){
-        // [projectName,multicastIP,multicastPort]
-        return "["+this.name+","+this.multicastIP+","+this.multicastPort+"]";
-    }
-
-    public void addMember(String member){
-        if(members.contains(member)) return;
-        members.add(member);
-    }
-
-
+    // Aggiunge una nuova card al progetto, che finisce nella lista TODO
     public Card addCard(String name, String description){
         Card card = new Card(name, description);
         // TODO: throw eccezione per card già esistente già presente in server addcard
@@ -139,6 +136,7 @@ public class Project {
         return card;
     }
 
+    // Sposta la card da una lista ad un'altra
     public Card moveCard(String name, Section fromSection, Section toSection)
             throws IllegalCardMovementException, CardNotFoundException {
 
@@ -171,6 +169,7 @@ public class Project {
         return card;
     }
 
+    // Determina se un progetto può essere cancellato o meno
     public boolean canDelete(){
         return todo.isEmpty()
                 && inProgress.isEmpty()
