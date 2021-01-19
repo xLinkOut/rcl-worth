@@ -42,10 +42,12 @@ public class Project {
         return members;
     }
 
-    public void addCard(String name, String description){
+    public Card addCard(String name, String description){
         Card card = new Card(name, description);
-        if(getCard(name, Section.TODO) != null) return;
+        // TODO: throw eccezione per card già esistente già presente in server addcard
+        //if(getCard(name, Section.TODO) != null) return null;
         todo.add(card);
+        return card;
     }
 
     public Card getCard(String name){

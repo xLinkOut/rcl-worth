@@ -1,6 +1,8 @@
 // @author Luca Cirillo (545480)
 
+import com.fasterxml.jackson.core.JsonGenerationException;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.gson.*;
@@ -623,22 +625,27 @@ public class ServerMain extends RemoteObject implements ServerRMI{
     private void addCard(String username, String projectName, String cardName, String cardDescription)
             throws ProjectNotFoundException, ForbiddenException, CardAlreadyExists {
 
-        if(DEBUG) System.out.println("Server@WORTH > addCard "+username+" "+projectName+" "+cardName+" "+cardDescription);
+        if (DEBUG)
+            System.out.println("Server@WORTH > addCard " + username + " " + projectName + " " + cardName + " " + cardDescription);
 
         // Controllare che il progetto esista
-        if(!projects.containsKey(projectName)) throw new ProjectNotFoundException(projectName);
+        if (!projects.containsKey(projectName)) throw new ProjectNotFoundException(projectName);
         Project project = projects.get(projectName);
 
         // Controllare che l'utente sia un membro del progetto
-        if(!project.getMembers().contains(getUser(username))) throw new ForbiddenException();
+        if (!project.getMembers().contains(getUser(username))) throw new ForbiddenException();
         // Controllare che non ci sia già una card con lo stesso nome
-        if(project.getCard(cardName) != null) throw new CardAlreadyExists(cardName);
+        if (project.getCard(cardName) != null) throw new CardAlreadyExists(cardName);
         // Creare la nuova card
-        project.addCard(cardName,cardDescription);
-
+        Card card = project.addCard(cardName, cardDescription);
+        // Salvo le informazioni su disco
+        try {
+            jacksonMapper.writeValue(Files.newBufferedWriter(
+                    Paths.get(pathProjects.toString() + "/" + projectName + "/" + cardName + ".json")), card);
+        // TODO avviso
+        } catch (IOException e) { e.printStackTrace(); }
     }
-
-    // Restituisce le informazioni su una card di un progetto
+        // Restituisce le informazioni su una card di un progetto
     private String showCard(String username, String projectName, String cardName)
             throws CardNotFoundException, ForbiddenException, ProjectNotFoundException {
         if(DEBUG) System.out.println("Server@WORTH > showCard "+username+" "+projectName+" "+cardName);
