@@ -592,11 +592,19 @@ public class ServerMain extends RemoteObject implements ServerRMI{
         project.addMember(user);
         //user.addProject(project);
         // TODO: eliminare se si riesce a togliere la dipendenza da user.projects
-        try {
-            jacksonMapper.writeValue(Files.newBufferedWriter(pathUsers), users);
-        } catch (IOException ioe) {
-            if (DEBUG) ioe.printStackTrace();
-            System.err.println("I was unable to save user information on the filesystem, on next restart they will probably be lost ...");
+        //try {
+        //    jacksonMapper.writeValue(Files.newBufferedWriter(pathUsers), users);
+        //} catch (IOException ioe) {
+        //    if (DEBUG) ioe.printStackTrace();
+        //    System.err.println("I was unable to save user information on the filesystem, on next restart they will probably be lost ...");
+        //}
+        // Salvo i dati aggiornati del progetto su disco
+        try{
+            jacksonMapper.writeValue(
+                    Files.newBufferedWriter(Paths.get(pathProjects.toString()+"/"+projectName+"/"+projectName+".json")),
+                    project);
+        } catch (IOException e) {
+            e.printStackTrace();
         }
         // Invio un avviso all'utente aggiunto, passandogli le informazioni necessarie ad
         // utilizzare la chat ed informandolo su chi lo ha aggiunto al progetto
