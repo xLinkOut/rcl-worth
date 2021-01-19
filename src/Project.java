@@ -113,7 +113,7 @@ public class Project {
         }
     }
 
-    public void moveCard(String name, Section fromSection, Section toSection)
+    public Card moveCard(String name, Section fromSection, Section toSection)
             throws IllegalCardMovementException, CardNotFoundException {
 
         // Controllo se from e to rispettano i vincoli di spostamento delle card
@@ -142,6 +142,7 @@ public class Project {
             // Aggiorno la lista di appartenenza
             card.setSection(toSection); // setSection aggiorna anche la history
         }else throw new CardNotFoundException(name);
+        return card;
     }
 
     public boolean canDelete(){

@@ -701,12 +701,19 @@ public class ServerMain extends RemoteObject implements ServerRMI{
         if(project.getCard(cardName) == null) throw new CardNotFoundException(cardName);
 
         // Controllo se from e to sono liste valide
-        // try/catch ? what if different string
+        // TODO: try/catch ? what if different string
         Project.Section fromSection = Project.Section.valueOf(from.toUpperCase());
         Project.Section toSection   = Project.Section.valueOf(to.toUpperCase());
 
         // Sposto la card (il rispetto dei vincoli è assicurato dal metodo invocato
-        project.moveCard(cardName,fromSection,toSection);
+        Card card = project.moveCard(cardName,fromSection,toSection);
+
+        // Salvo le modifiche della card su disco
+        try {
+            jacksonMapper.writeValue(Files.newBufferedWriter(
+                    Paths.get(pathProjects.toString() + "/" + projectName + "/" + cardName + ".json")), card);
+            // TODO avviso
+        } catch (IOException e) { e.printStackTrace(); }
 
         // Invio una notifica sulla chat di progetto
         String message = getTime()+" WORTH: "+username+" has moved card "+cardName+
