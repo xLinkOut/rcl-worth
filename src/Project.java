@@ -1,23 +1,26 @@
+// @author Luca Cirillo (545480)
+
 import WorthExceptions.CardNotFoundException;
 import WorthExceptions.IllegalCardMovementException;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.ArrayList;
 
 public class Project {
-    // controlli su tutte le funzioni per vedere se user in members
+
     public enum Section { TODO, INPROGRESS, TOBEREVISED, DONE }
 
-    private final String name;
-    private final List<User> members;
+    private final String name;          // Nome del progetto
+    private final List<User> members;   // Utenti membri del progetto
 
-    private final List<Card> todo;
-    private final List<Card> inProgress;
-    private final List<Card> toBeRevised;
-    private final List<Card> done;
+    private final List<Card> todo;        // Cards nella lista TODO
+    private final List<Card> inProgress;  // Cards nella lista INPROGRESS
+    private final List<Card> toBeRevised; // Cards nella lista TOBEREVISED
+    private final List<Card> done;        // Cards nella lista DONE
 
-    private final String multicastIP;
-    private final int multicastPort;
+    private final String multicastIP;     // Indirizzo IP multicast della chat di progetto
+    private final int multicastPort;      // Porta della chat di progetto
 
     public Project(String name, User owner, String multicastIP, int multicastPort){
         this.name = name;
@@ -32,23 +35,6 @@ public class Project {
     }
 
     public String getName() { return name; }
-
-    public void addMember(User member){
-        if(members.contains(member)) return;
-        members.add(member);
-    }
-
-    public List<User> getMembers(){
-        return members;
-    }
-
-    public Card addCard(String name, String description){
-        Card card = new Card(name, description);
-        // TODO: throw eccezione per card già esistente già presente in server addcard
-        //if(getCard(name, Section.TODO) != null) return null;
-        todo.add(card);
-        return card;
-    }
 
     public Card getCard(String name){
         for(Card card : todo)
@@ -83,27 +69,14 @@ public class Project {
         return null;
     }
 
-    public List<Card> getCards(){
-        List<Card> cards = new ArrayList<>(todo);
-        cards.addAll(inProgress);
-        cards.addAll(toBeRevised);
-        cards.addAll(done);
-        return cards;
-    }
-
     public String getCardHistory(String name){
         Card card = getCard(name);
         if(card == null) throw new NullPointerException(name);
         return card.getHistory();
     }
 
-    public boolean canDeleteProject(){
-        return todo.isEmpty() && inProgress.isEmpty()
-                && toBeRevised.isEmpty() && !done.isEmpty();
-    }
-
-    // TODO CAMBIARE
     public List<Card> getList(Section section){
+        // TODO CAMBIARE
         switch (section){
             case TODO: return todo;
             case INPROGRESS: return inProgress;
@@ -111,6 +84,35 @@ public class Project {
             case DONE: return done;
             default: return null;
         }
+    }
+
+    public String getMulticastIP(){
+        return this.multicastIP;
+    }
+
+    public int getMulticastPort() { return this.multicastPort; }
+
+    @JsonIgnore // E' solo una scorciatoia per altri metodi, non deve persistere sul sistema
+    public String getMulticastInfo(){
+        // [projectName,multicastIP,multicastPort]
+        return "["+this.name+","+this.multicastIP+","+this.multicastPort+"]";
+    }
+
+    public void addMember(User member){
+        if(members.contains(member)) return;
+        members.add(member);
+    }
+
+    public List<User> getMembers(){
+        return members;
+    }
+
+    public Card addCard(String name, String description){
+        Card card = new Card(name, description);
+        // TODO: throw eccezione per card già esistente già presente in server addcard
+        //if(getCard(name, Section.TODO) != null) return null;
+        todo.add(card);
+        return card;
     }
 
     public Card moveCard(String name, Section fromSection, Section toSection)
@@ -150,17 +152,5 @@ public class Project {
                 && inProgress.isEmpty()
                 && toBeRevised.isEmpty();
     }
-
-    public String getMulticastInfo(){
-        // [projectName,multicastIP,multicastPort]
-        return "["+this.name+","+this.multicastIP+","+this.multicastPort+"]";
-    }
-
-    public String getMulticastIP(){
-        return this.multicastIP;
-    }
-
-    public int getMulticastPort() { return this.multicastPort; }
-
 
 }
