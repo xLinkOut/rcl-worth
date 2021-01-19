@@ -2,6 +2,7 @@
 
 import com.fasterxml.jackson.core.JsonGenerationException;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
@@ -89,22 +90,55 @@ public class ServerMain extends RemoteObject implements ServerRMI{
 
                 // Se la directory "data/Projects/" esiste
                 if(Files.exists(pathProjects)){
+                    // Creo la struttura dati che ospiterà i progetti
+                    this.projects = new ConcurrentHashMap<>();
                     // Elenco i progetti presenti in "data/Projects/"
                     List<Path> subfolders = Files.walk(pathProjects, 1)
                             .filter(Files::isDirectory)
                             .collect(Collectors.toList());
-                    System.out.println(subfolders.toString());
                     // Rimuovo il primo elemento, che corrisponde proprio alla cartella "data/Projects/"
                     subfolders.remove(0);
 
+                    System.out.println(subfolders.toString());
+
                     // Per ogni progetto presente, ne ricostruisco la struttura
                     for(Path projectFolder : subfolders){
-                        // Se esiste il file di progetto "<projectName>.json"
-                        System.out.println(projectFolder.toUri());
-                    }
+                        // Mantengo il path diretto al file config del progetto
+                        Path projectConfigFile = Paths.get(projectFolder.toString()+"/"+projectFolder.getFileName()+".json");
+                        // Se il file di progetto "<projectName>.json" non esiste,
+                        // il progetto è corrotto e non posso ricostruirlo;
+                        // provvedo quindi ad eliminarlo dal disco
+                        if(Files.notExists(projectConfigFile)){
+                            try {
+                                Files.walk(projectFolder)
+                                        .sorted(Comparator.reverseOrder())
+                                        .map(Path::toFile)
+                                        //.peek(System.out::println)
+                                        .forEach(File::delete);
+                                Files.delete(projectFolder);
+                            } catch (IOException e) {
+                                // TODO: avviso
+                                e.printStackTrace();
+                            }
+                        }
+                        // Elenco tutti i files nella cartella, relativi alle card
+                        List<Path> projectFiles = Files.walk(projectFolder, 1)
+                                .filter(Files::isRegularFile)
+                                .collect(Collectors.toList());
+                        // Rimuovo dalla lista il path del config file
+                        projectFiles.remove(projectConfigFile);
 
-                    // Temporary, first I need to serialize things
-                    this.projects = new ConcurrentHashMap<>();
+                        // Carico in memoria le cards
+                        List<Card> cards = new ArrayList<>();
+                        for(Path cardFile : projectFiles){
+                            cards.add(jacksonMapper.readValue(Files.newBufferedReader(cardFile),Card.class));
+                        }
+
+                        // Carico la struttura del progetto
+                        jacksonMapper.setInjectableValues(new InjectableValues.Std().addValue("cards",cards));
+                        projects.put(projectFolder.toString(),jacksonMapper.readValue(Files.newBufferedReader(projectConfigFile),Project.class));
+                        System.out.println(projects.get(projectFolder.toString()));
+                    }
 
                 }else{
                     // Altrimenti creo la cartella per contenere i futuri progetti
@@ -796,7 +830,7 @@ public class ServerMain extends RemoteObject implements ServerRMI{
                 Files.walk(projectPath)
                         .sorted(Comparator.reverseOrder())
                         .map(Path::toFile)
-                        .peek(System.out::println)
+                        //.peek(System.out::println)
                         .forEach(File::delete);
             } catch (IOException e) {
                 // TODO: avviso

@@ -2,7 +2,10 @@
 
 import WorthExceptions.CardNotFoundException;
 import WorthExceptions.IllegalCardMovementException;
+import com.fasterxml.jackson.annotation.JacksonInject;
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.List;
 import java.util.ArrayList;
@@ -22,6 +25,27 @@ public class Project {
     private final String multicastIP;     // Indirizzo IP multicast della chat di progetto
     private final int multicastPort;      // Porta della chat di progetto
 
+    @JsonCreator
+    public Project(
+            @JsonProperty("name") String name,
+            @JsonProperty("members") List<User> members,
+            @JsonProperty("multicastIP") String multicastIP,
+            @JsonProperty("multicastPort") int multicastPort,
+            @JacksonInject("cards") List<Card> cards){
+
+        this.name = name;
+        this.members = members;
+        this.multicastIP = multicastIP;
+        this.multicastPort = multicastPort;
+        this.todo = new ArrayList<>();
+        this.inProgress = new ArrayList<>();
+        this.toBeRevised = new ArrayList<>();
+        this.done = new ArrayList<>();
+        for(Card card : cards){
+            getList(card.getSection()).add(card);
+        }
+    }
+
     public Project(String name, User owner, String multicastIP, int multicastPort){
         this.name = name;
         this.members = new ArrayList<>();
@@ -35,6 +59,9 @@ public class Project {
     }
 
     public String getName() { return name; }
+    public List<User> getMembers(){
+        return members;
+    }
 
     public Card getCard(String name){
         for(Card card : todo)
@@ -103,9 +130,6 @@ public class Project {
         members.add(member);
     }
 
-    public List<User> getMembers(){
-        return members;
-    }
 
     public Card addCard(String name, String description){
         Card card = new Card(name, description);
