@@ -15,7 +15,7 @@ public class Project {
     public enum Section { TODO, INPROGRESS, TOBEREVISED, DONE }
 
     private final String name;          // Nome del progetto
-    private final List<User> members;   // Utenti membri del progetto
+    private final List<String> members;   // Utenti membri del progetto
 
     private final List<Card> todo;        // Cards nella lista TODO
     private final List<Card> inProgress;  // Cards nella lista INPROGRESS
@@ -28,7 +28,7 @@ public class Project {
     @JsonCreator
     public Project(
             @JsonProperty("name") String name,
-            @JsonProperty("members") List<User> members,
+            @JsonProperty("members") List<String> members,
             @JsonProperty("multicastIP") String multicastIP,
             @JsonProperty("multicastPort") int multicastPort,
             @JacksonInject("cards") List<Card> cards){
@@ -46,7 +46,7 @@ public class Project {
         }
     }
 
-    public Project(String name, User owner, String multicastIP, int multicastPort){
+    public Project(String name, String owner, String multicastIP, int multicastPort){
         this.name = name;
         this.members = new ArrayList<>();
         this.todo = new ArrayList<>();
@@ -59,7 +59,7 @@ public class Project {
     }
 
     public String getName() { return name; }
-    public List<User> getMembers(){
+    public List<String> getMembers(){
         return members;
     }
 
@@ -125,7 +125,7 @@ public class Project {
         return "["+this.name+","+this.multicastIP+","+this.multicastPort+"]";
     }
 
-    public void addMember(User member){
+    public void addMember(String member){
         if(members.contains(member)) return;
         members.add(member);
     }

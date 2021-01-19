@@ -136,8 +136,9 @@ public class ServerMain extends RemoteObject implements ServerRMI{
 
                         // Carico la struttura del progetto
                         jacksonMapper.setInjectableValues(new InjectableValues.Std().addValue("cards",cards));
-                        projects.put(projectFolder.toString(),jacksonMapper.readValue(Files.newBufferedReader(projectConfigFile),Project.class));
-                        System.out.println(projects.get(projectFolder.toString()));
+                        System.out.println(projectFolder.getFileName().toString());
+                        projects.put(projectFolder.getFileName().toString(),jacksonMapper.readValue(Files.newBufferedReader(projectConfigFile),Project.class));
+                        System.out.println(projects.get(projectFolder.getFileName().toString()));
                     }
 
                 }else{
@@ -571,8 +572,8 @@ public class ServerMain extends RemoteObject implements ServerRMI{
         if(projects.containsKey(projectName)) throw new ProjectNameAlreadyInUse(projectName);
 
         // Creo un nuovo progetto e lo aggiungo al database
-        User user = getUser(username);
-        Project project = new Project(projectName, user, genMulticastIP(),1025+random.nextInt(64510));
+        //User user = getUser(username);
+        Project project = new Project(projectName, username, genMulticastIP(),1025+random.nextInt(64510));
         projects.put(projectName, project);
         //user.addProject(project);
         // TODO: eliminare se si riesce a togliere la dipendenza da user.projects
@@ -613,17 +614,17 @@ public class ServerMain extends RemoteObject implements ServerRMI{
         if(!userExists(memberUsername)) throw new UserNotFoundException(memberUsername);
 
         Project project = projects.get(projectName);
-        User user = getUser(memberUsername);
+        //User user = getUser(memberUsername);
 
         // controllo che username sia un membro di projectName
-        if(!project.getMembers().contains(getUser(username))) throw new ForbiddenException();
+        if(!project.getMembers().contains(username)) throw new ForbiddenException();
 
         // Controllo che memberUsername non faccia già parte di projectName
-        if(project.getMembers().contains(user))
+        if(project.getMembers().contains(memberUsername))
             throw new AlreadyMemberException(memberUsername);
 
         // Aggiungo memberUsername come nuovo membro del progetto projectName
-        project.addMember(user);
+        project.addMember(memberUsername);
         //user.addProject(project);
         // TODO: eliminare se si riesce a togliere la dipendenza da user.projects
         //try {
@@ -656,10 +657,11 @@ public class ServerMain extends RemoteObject implements ServerRMI{
 
         Project project = projects.get(projectName);
         // Se l'utente è un membro del progetto, può consultare la lista membri
-        if(project.getMembers().contains(getUser(username)))
-            return project.getMembers().stream()
-                .map(User::getUsername)
-                .collect(Collectors.toList()).toString();
+        if(project.getMembers().contains(username))
+            //return project.getMembers().stream()
+            //    .map(User::getUsername)
+            //    .collect(Collectors.toList()).toString();
+            return project.getMembers().toString();
         else throw new ForbiddenException();
     }
 
@@ -675,7 +677,7 @@ public class ServerMain extends RemoteObject implements ServerRMI{
         Project project = projects.get(projectName);
 
         // Controllare che l'utente sia un membro del progetto
-        if (!project.getMembers().contains(getUser(username))) throw new ForbiddenException();
+        if (!project.getMembers().contains(username)) throw new ForbiddenException();
         // Controllare che non ci sia già una card con lo stesso nome
         if (project.getCard(cardName) != null) throw new CardAlreadyExists(cardName);
         // Creare la nuova card
@@ -697,7 +699,7 @@ public class ServerMain extends RemoteObject implements ServerRMI{
         Project project = projects.get(projectName);
 
         // Controllare che l'utente sia un membro del progetto
-        if(!project.getMembers().contains(getUser(username))) throw new ForbiddenException();
+        if(!project.getMembers().contains(username)) throw new ForbiddenException();
 
         Card card = project.getCard(cardName);
         if(card == null) throw new CardNotFoundException(cardName);
@@ -714,7 +716,7 @@ public class ServerMain extends RemoteObject implements ServerRMI{
         Project project = projects.get(projectName);
 
         // Controllare che l'utente sia un membro del progetto
-        if(!project.getMembers().contains(getUser(username))) throw new ForbiddenException();
+        if(!project.getMembers().contains(username)) throw new ForbiddenException();
 
         // Costruisco una stringa contente i nomi di tutte le card
         // Organizzate come list.toString(), ovvero
@@ -737,7 +739,7 @@ public class ServerMain extends RemoteObject implements ServerRMI{
         Project project = projects.get(projectName);
 
         // Controllare che l'utente sia un membro del progetto
-        if(!project.getMembers().contains(getUser(username))) throw new ForbiddenException();
+        if(!project.getMembers().contains(username)) throw new ForbiddenException();
 
         // Controllo che esista la card
         if(project.getCard(cardName) == null) throw new CardNotFoundException(cardName);
@@ -780,7 +782,7 @@ public class ServerMain extends RemoteObject implements ServerRMI{
         Project project = projects.get(projectName);
 
         // Controllare che l'utente sia un membro del progetto
-        if(!project.getMembers().contains(getUser(username))) throw new ForbiddenException();
+        if(!project.getMembers().contains(username)) throw new ForbiddenException();
 
         // Controllo che esista la card
         if(project.getCard(cardName) == null) throw new CardNotFoundException(cardName);
@@ -797,7 +799,7 @@ public class ServerMain extends RemoteObject implements ServerRMI{
         Project project = projects.get(projectName);
 
         // Controllare che l'utente sia un membro del progetto
-        if(!project.getMembers().contains(getUser(username))) throw new ForbiddenException();
+        if(!project.getMembers().contains(username)) throw new ForbiddenException();
 
         // Controllo che tutte le cards siano nella lista DONE
         if(project.canDelete()){
@@ -807,7 +809,7 @@ public class ServerMain extends RemoteObject implements ServerRMI{
             // Rimuovo il progetto dalle liste personali di tutti i membri
             // (compreso l'utente che ha richiesto la cancellazione)
             // e notifica subito l'utente dell'evento
-            for(User user : project.getMembers()) {
+            for(String user : project.getMembers()) {
                 //user.removeProject(project);
                 //try {
                 //    jacksonMapper.writeValue(Files.newBufferedWriter(pathUsers), users);
@@ -817,7 +819,7 @@ public class ServerMain extends RemoteObject implements ServerRMI{
                 //}
                 // TODO: eliminare se si riesce a togliere la dipendenza da user.projects
                 // TODO: non inviare la notifica alla stessa persona che ha cancellato il progetto
-                try { clients.get(user.getUsername()).notifyEvent(
+                try { clients.get(user).notifyEvent(
                         "Ding! "+username+" ha cancellato il progetto "+projectName);
                 } catch (RemoteException re) {re.printStackTrace();}
             }
@@ -974,9 +976,9 @@ public class ServerMain extends RemoteObject implements ServerRMI{
     }
 
     private List<Project> getUserProjects(String username){
-        User user = getUser(username);
+        //User user = getUser(username);
         return projects.values().stream()
-                .filter(project -> project.getMembers().contains(user))
+                .filter(project -> project.getMembers().contains(username))
                 .collect(Collectors.toList());
     }
     // * CALLBACKS
