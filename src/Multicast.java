@@ -1,16 +1,6 @@
-import WorthExceptions.MulticastException;
 import WorthExceptions.NoMulticastAddressAvailableException;
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -21,7 +11,7 @@ public class Multicast {
 
     // Inizializza un gestore "pulito" degli indirizzi multicast
     public Multicast(){
-        this.lastIP = "224.0.0.1";
+        this.lastIP = "224.0.0.0";
         this.releasedIP = new LinkedList<>();
     }
 
@@ -30,7 +20,7 @@ public class Multicast {
     public Queue<String> getReleasedIP(){return releasedIP;}
 
     @JsonIgnore
-    public String getIP() throws NoMulticastAddressAvailableException {
+    public String getNewIP() throws NoMulticastAddressAvailableException {
         // Se è presente un indirizzo IP precedentemente generato
         // ma rilasciato a seguito della cancellazione del progetto
         // a cui era stato assegnato, lo riassegno togliendolo
@@ -74,21 +64,8 @@ public class Multicast {
         }
     }
 
-
-    public static void main(String[] args) throws IOException, NoMulticastAddressAvailableException {
-        ObjectMapper jacksonMapper = new ObjectMapper();
-
-        Multicast readMulticast = jacksonMapper.readValue(
-                Files.newBufferedReader(Paths.get("data/Multicast.json")),
-                Multicast.class);
-
-        System.out.println(readMulticast.toString());
-        for(int i=0;i<10;i++)
-            System.out.println(readMulticast.getIP());
-
-        jacksonMapper.writeValue(Files.newBufferedWriter(
-                Paths.get("data/Multicast.json")),
-                readMulticast);
-
+    public void addReleasedIP(String IP){
+        this.releasedIP.add(IP);
     }
+
 }

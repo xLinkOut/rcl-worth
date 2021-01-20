@@ -26,7 +26,7 @@ import java.nio.charset.StandardCharsets;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.concurrent.ConcurrentHashMap;
 
-@SuppressWarnings("ReadWriteStringCanBeUsed")
+@SuppressWarnings({"ReadWriteStringCanBeUsed", "AccessStaticViaInstance"})
 public class ServerMain extends RemoteObject implements ServerRMI{
     // * TCP
     private static final int PORT_TCP = 6789;
@@ -44,16 +44,12 @@ public class ServerMain extends RemoteObject implements ServerRMI{
     private static final Gson gson = new Gson();
     private static final ObjectMapper jacksonMapper = new ObjectMapper()
             .enable(SerializationFeature.INDENT_OUTPUT);
+    private static Multicast multicast;
 
     // Restore <final> keyword
-    private List<User> users;
-    private Map<String, NotifyEventInterface> clients;
-    private Map<String, Project> projects;
-
-    // * DEFAULT
-    private static final String defaultMulticast = """
-    {"lastMulticastIP":"224.0.0.1","releasedIP":[]}
-    """;
+    private static List<User> users;
+    private static Map<String, NotifyEventInterface> clients;
+    private static Map<String, Project> projects;
 
     // Inizializza il sistema oppure ripristina l'ultima sessione
     public ServerMain(){
@@ -76,17 +72,19 @@ public class ServerMain extends RemoteObject implements ServerRMI{
                 Files.createFile(pathUsers);
                 // data/Multicast.json
                 Files.createFile(pathMulticast);
-                // Inizializzo il file di Multicast
-                Files.write(pathMulticast, defaultMulticast.getBytes(StandardCharsets.UTF_8));
+                // Inizializzo l'oggetto Multicast
+                this.multicast = new Multicast();
+                // E ne salvo il contenuto di default su disco
+                jacksonMapper.writeValue(Files.newBufferedWriter(pathMulticast),this.multicast);
                 // Inizializzo le strutture dati locali
                 this.users = new ArrayList<>();
                 this.projects = new ConcurrentHashMap<>();
-            }else{
+            }else {
                 // La directory "data/" esiste, probabilmente il sistema è già stato avviato prima d'ora
                 // Cerco eventuali sessioni precedenti da ripristinare
 
                 // Se la directory "data/Projects/" esiste
-                if(Files.exists(pathProjects)){
+                if (Files.exists(pathProjects)) {
                     // Creo la struttura dati che ospiterà i progetti
                     this.projects = new ConcurrentHashMap<>();
                     // Elenco i progetti presenti in "data/Projects/"
@@ -97,19 +95,21 @@ public class ServerMain extends RemoteObject implements ServerRMI{
                     subfolders.remove(0);
 
                     // Per ogni progetto presente, ne ricostruisco la struttura
-                    for(Path projectFolder : subfolders){
+                    for (Path projectFolder : subfolders) {
                         // Mantengo il path diretto al file config del progetto
-                        Path projectConfigFile = Paths.get(projectFolder.toString()+"/"+projectFolder.getFileName()+".json");
+                        Path projectConfigFile = Paths.get(projectFolder.toString() + "/" + projectFolder.getFileName() + ".json");
                         // Se il file di progetto "<projectName>.json" non esiste,
                         // il progetto è corrotto e non posso ricostruirlo;
                         // provvedo quindi ad eliminarlo dal disco
-                        if(Files.notExists(projectConfigFile)){
-                            try {Files.walk(projectFolder)
-                                    .sorted(Comparator.reverseOrder())
-                                    .map(Path::toFile)
-                                    .forEach(File::delete);
+                        if (Files.notExists(projectConfigFile)) {
+                            try {
+                                Files.walk(projectFolder)
+                                        .sorted(Comparator.reverseOrder())
+                                        .map(Path::toFile)
+                                        .forEach(File::delete);
                                 Files.delete(projectFolder);
-                            } catch (IOException ignored){}
+                            } catch (IOException ignored) {
+                            }
                         }
 
                         // Elenco tutti i files nella cartella, relativi alle card
@@ -121,20 +121,20 @@ public class ServerMain extends RemoteObject implements ServerRMI{
 
                         // Carico in memoria le cards
                         List<Card> cards = new ArrayList<>();
-                        for(Path cardFile : projectFiles)
-                            cards.add(jacksonMapper.readValue(Files.newBufferedReader(cardFile),Card.class));
+                        for (Path cardFile : projectFiles)
+                            cards.add(jacksonMapper.readValue(Files.newBufferedReader(cardFile), Card.class));
 
                         // Carico in memoria il progetto
                         // Comando di Jackson che permette di "iniettare" oggetti esterni durante
                         // la deserializzazione di un file json
-                        jacksonMapper.setInjectableValues(new InjectableValues.Std().addValue("cards",cards));
+                        jacksonMapper.setInjectableValues(new InjectableValues.Std().addValue("cards", cards));
                         projects.put(
                                 projectFolder.getFileName().toString(), // Nome del progetto
-                                jacksonMapper.readValue(Files.newBufferedReader(projectConfigFile),Project.class)
+                                jacksonMapper.readValue(Files.newBufferedReader(projectConfigFile), Project.class)
                         );
                     }
-                    if (DEBUG) System.out.println("Loaded "+this.projects.size()+" projects");
-                }else{
+                    if (DEBUG) System.out.println("Loaded " + this.projects.size() + " projects");
+                } else {
                     // Altrimenti creo la cartella per contenere i futuri progetti
                     Files.createDirectory(pathProjects);
                     // Ed inizializzo la struttura dati senza caricare nulla
@@ -143,20 +143,28 @@ public class ServerMain extends RemoteObject implements ServerRMI{
                 }
 
                 // Se "data/Users.json" esiste e non è vuoto, carico in memoria la lista di utenti registrati
-                if(Files.exists(pathUsers) && Files.size(pathUsers) > 0){
+                if (Files.exists(pathUsers) && Files.size(pathUsers) > 0) {
                     this.users = jacksonMapper.readValue(
                             Files.newBufferedReader(pathUsers),
-                            new TypeReference<List<User>>(){});
-                    if (DEBUG) System.out.println("Loaded "+this.users.size()+" users");
-                }else{
+                            new TypeReference<List<User>>() {
+                            });
+                    if (DEBUG) System.out.println("Loaded " + this.users.size() + " users");
+                } else {
                     // Altrimenti inizializzo la struttura dati vuota
                     this.users = new ArrayList<>();
                     if (DEBUG) System.out.println("No users found");
                 }
 
                 // Se il "data/Multicast.json" non esiste oppure è vuoto, ne creo uno di default
-                if(Files.notExists(pathMulticast) || Files.size(pathMulticast) == 0)
-                    Files.write(pathMulticast, defaultMulticast.getBytes(StandardCharsets.UTF_8));
+                if (Files.notExists(pathMulticast) || Files.size(pathMulticast) == 0) {
+                    this.multicast = new Multicast();
+                    jacksonMapper.writeValue(Files.newBufferedWriter(pathMulticast), this.multicast);
+                // Altrimenti ne carico il contenuto nell'oggetto Multicast
+                }else{
+                    this.multicast = jacksonMapper.readValue(Files.newBufferedReader(pathMulticast),Multicast.class);
+                    if (DEBUG) System.out.println("Last used multicast IP: "+this.multicast.getLastIP());
+                    if (DEBUG) System.out.println("There are "+this.multicast.getReleasedIP().size()+" free IP address");
+                }
             }
 
             // Inizializzo la struttura dati utilizzata per le callbacks,
@@ -294,8 +302,8 @@ public class ServerMain extends RemoteObject implements ServerRMI{
                                                 +createProject(cmd[1],cmd[2]));
                                     } catch (ProjectNameAlreadyInUse pnaiue) {
                                         key.attach("ko:409:The name chosen for the project is already in use, try another one!");
-                                    } catch (MulticastException e) {
-                                        e.printStackTrace();
+                                    } catch (NoMulticastAddressAvailableException e) {
+                                        key.attach("ko:507:There are no more IP addresses available for creating a new project! Please try again later, new ones may be released");
                                     }
                                     break;
 
@@ -559,7 +567,7 @@ public class ServerMain extends RemoteObject implements ServerRMI{
 
     // Un utente richiede la creazione di un nuovo progetto
     private String createProject(String username, String projectName)
-            throws ProjectNameAlreadyInUse, MulticastException {
+            throws ProjectNameAlreadyInUse, NoMulticastAddressAvailableException {
 
         if(DEBUG) System.out.println("Server@WORTH > createProject "+username+" "+projectName);
 
@@ -888,86 +896,24 @@ public class ServerMain extends RemoteObject implements ServerRMI{
     }
 
     // Genera un indirizzo IP multicast, sia esso nuovo o riutilizzato
-    private String genMulticastIP() throws MulticastException {
-        // 224.0.0.1 -> 239.255.255.255
-        String multicastIP = "";
-        // Carico in memoria il file Multicast.json
-        String multicast = null;
-        try { multicast = new String(Files.readAllBytes(pathMulticast));
-        } catch (IOException e) { throw new MulticastException(); }
-        // Parso la stringa JSON con Gson
-        JsonObject multicastJson = new JsonParser().parse(multicast).getAsJsonObject();
-        // Se sono disponibili IP liberati da progetti cancellati
-        JsonArray releasedIP = (JsonArray) multicastJson.get("releasedIP");
-        if(releasedIP.size() > 0){
-            // Prendo il più vecchio IP che si è liberato (il primo della lista)
-            multicastIP = releasedIP.get(0).toString().replace("\"","");
-            System.out.println(multicastIP);
-            // Lo rimuovo dalla lista
-            releasedIP.remove(0);
-            // Rimetto la lista aggiornata nel JSON
-            multicastJson.add("releasedIP",releasedIP);
-        }else {
-            // Altrimenti, genero un nuovo IP incrementale
-            // Leggo l'ultimo IP utilizzato dal JSON come una stringa
-            String sLastMulticastIP = multicastJson.get("lastMulticastIP").getAsString();
-            // Controllo che non sia arrivato all'ultimo IP disponibile (239.255.255.255)
-            // Nel caso, faccio un hard reset riportandolo al primo
-            if (sLastMulticastIP.equals("239.255.255.255")) {
-                multicastIP = "224.0.0.1";
-            } else {
-                // Divido gli ottetti separati dal punto (.)
-                // e li casto da String a int
-                int[] lastMulticastIP = Arrays.stream(
-                        sLastMulticastIP.split("\\."))
-                        .mapToInt(Integer::parseInt).toArray();
-                // Li parso e li incremento
-                for (int i = 3; i >= 0; i--) {
-                    // I 3 byte meno significativi hanno limite massimo 255
-                    if (i > 0) {
-                        if (lastMulticastIP[i] < 255) {
-                            lastMulticastIP[i]++;
-                            break;
-                        }
-                    } else {
-                        // Il byte più significativo invece 239
-                        if (lastMulticastIP[i] < 239) lastMulticastIP[i]++;
-                    }
-                }
-                // Riporto gli ottetti da int a String, in notazione decimale puntata
-                multicastIP = Arrays.stream(lastMulticastIP)
-                        .mapToObj(String::valueOf)
-                        .collect(Collectors.joining("."));
-            }
-            // Aggiungo l'IP appena generato al file
-            System.out.println(multicastIP);
-            multicastJson.add("lastMulticastIP", JsonParser.parseString(multicastIP));
-        }
-        // Salvo tutto nuovamente su file, prima di ritornare l'IP
-        try { Files.write(pathMulticast,multicastJson.toString().getBytes(StandardCharsets.UTF_8));
-        } catch (IOException e) { throw new MulticastException(); }
+    private String genMulticastIP() throws NoMulticastAddressAvailableException {
+        // Genero un nuovo indirizzo IP multicast
+        String multicastIP = multicast.getNewIP();
+        // Salvo tutto su file, prima di ritornare l'IP
+        try { jacksonMapper.writeValue(Files.newBufferedWriter(pathMulticast),multicast);
+        } catch (IOException e) { System.err.println("I was unable to save multicast information on the filesystem, on next restart they will probably be lost ..."); }
 
-        if(DEBUG) System.out.println(multicastJson.toString());
+        if(DEBUG) System.out.println(multicastIP);
         return multicastIP;
     }
 
     // Aggiunge l'indirizzo IP multicast alla lista degli indirizzi rilasciati
     private void saveReleasedIP(String IP) throws MulticastException {
-        // Carico in memoria il file Multicast.json
-        String multicast = null;
-        try { multicast = new String(Files.readAllBytes(pathMulticast));
-        } catch (IOException e) { throw new MulticastException(); }
-        // Parso la stringa JSON con Gson
-        JsonObject multicastJson = new JsonParser().parse(multicast).getAsJsonObject();
-        // "Seleziono" la lista degli IP che si sono liberati
-        JsonArray releasedIP = (JsonArray) multicastJson.get("releasedIP");
-        // Aggiungo il nuovo IP appena rilasciato da un progetto
-        releasedIP.add(IP);
-        // Rimetto la lista nel JSON
-        multicastJson.add("releasedIP",releasedIP);
-        // Salvo tutto nuovamente su file
-        try { Files.write(pathMulticast,multicastJson.toString().getBytes(StandardCharsets.UTF_8));
-        } catch (IOException e) { throw new MulticastException(); }
+        // Aggiungo l'indirizzo IP rilasciato alla lista
+        multicast.addReleasedIP(IP);
+        // Salvo tutto su file
+        try { jacksonMapper.writeValue(Files.newBufferedWriter(pathMulticast),multicast);
+        } catch (IOException e) { System.err.println("I was unable to save multicast information on the filesystem, on next restart they will probably be lost ..."); }
     }
 
     private List<Project> getUserProjects(String username){
