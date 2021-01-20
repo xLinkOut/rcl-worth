@@ -9,17 +9,18 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JacksonInject;
 
+// Eccezioni di WORTH
 import WorthExceptions.CardNotFoundException;
 import WorthExceptions.IllegalCardMovementException;
 
-// Identifica un progetto creato sul sistema da un utente
+// Progetto creato sul sistema da un utente
 public class Project {
 
     // Liste in cui si possono collocare le cards
     public enum Section { TODO, INPROGRESS, TOBEREVISED, DONE }
 
     private final String name;            // Nome del progetto, univoco nel sistema
-    private final List<String> members;   // Utenti membri del progetto
+    private final List<String> members;   // Utenti che sono membri del progetto
 
     private final List<Card> todo;        // Cards nella lista TODO
     private final List<Card> inProgress;  // Cards nella lista INPROGRESS
@@ -45,6 +46,7 @@ public class Project {
         this.inProgress = new ArrayList<>();
         this.toBeRevised = new ArrayList<>();
         this.done = new ArrayList<>();
+        // Smistamento delle cards nelle rispettive liste all'avvio del server
         for(Card card : cards) getList(card.getSection()).add(card);
     }
 
@@ -52,10 +54,12 @@ public class Project {
         this.name = name;
         this.members = new ArrayList<>();
         this.members.add(owner);
+
         this.todo = new ArrayList<>();
-        this.inProgress = new ArrayList<>();
         this.toBeRevised = new ArrayList<>();
+        this.inProgress = new ArrayList<>();
         this.done = new ArrayList<>();
+
         this.multicastIP = multicastIP;
         this.multicastPort = multicastPort;
     }
@@ -67,6 +71,7 @@ public class Project {
 
     // Cerca una card nel progetto quando non si conosce la lista di appartenenza
     public Card getCard(String name){
+        // TODO Lanciare CardNotFound se non viene trovata
         for(Card card : todo)
             if(card.getName().equals(name)) return card;
 
@@ -82,25 +87,16 @@ public class Project {
         return null;
     }
 
-    // Cerca una card nel progetto in una specifica lista
+    // Cerca una card nel progetto in una lista specifica
     public Card getCard(String name, Section section){
-        List<Card> list;
-        // Enhanced switch in java 13
-        switch (section){
-            case TODO: list = todo; break;
-            case INPROGRESS: list = inProgress; break;
-            case TOBEREVISED: list = toBeRevised; break;
-            case DONE: list = done; break;
-            default: throw new IllegalStateException("Unexpected value: " + section);
-        }
-
-        for(Card card : list)
+        // TODO Lanciare CardNotFound se non viene trovata
+        for(Card card : getList(section))
             if(card.getName().equals(name)) return card;
-
         return null;
     }
 
     public String getCardHistory(String name){
+        // TODO Lanciare CardNotFound se la card non esiste
         Card card = getCard(name);
         if(card == null) throw new NullPointerException(name);
         return card.getHistory();
@@ -108,13 +104,16 @@ public class Project {
 
     public String getMulticastIP(){ return this.multicastIP; }
 
-    public int getMulticastPort() { return this.multicastPort; }
+    public int getMulticastPort(){ return this.multicastPort; }
 
-    @JsonIgnore // E' solo una scorciatoia per altri metodi, non deve persistere sul sistema
-    public String getMulticastInfo(){ return "["+this.name+","+this.multicastIP+","+this.multicastPort+"]"; }
+    @JsonIgnore // E' una scorciatoia per altri metodi, non deve persistere sul sistema
+    public String getMulticastInfo(){
+        // [projectName,multicastIP,multicastPort]
+        return "["+this.name+","+this.multicastIP+","+this.multicastPort+"]";
+    }
 
     public List<Card> getList(Section section){
-        // TODO CAMBIARE
+        // TODO Cambiare con un'implementazione più efficiente
         switch (section){
             case TODO: return todo;
             case INPROGRESS: return inProgress;
@@ -125,12 +124,17 @@ public class Project {
     }
 
     // Aggiunge un nuovo utente come membro del progetto
-    public void addMember(String member){ if(!members.contains(member)) members.add(member); }
+    public void addMember(String member){
+        if(!members.contains(member)) members.add(member);
+    }
 
-    // Aggiunge una nuova card al progetto, che finisce nella lista TODO
+    // TODO isMember(String username)
+    // (sostituisce getMembers().contains(username)
+
+    // Aggiunge una nuova card al progetto, che finisce nella lista TODO di default
     public Card addCard(String name, String description){
         Card card = new Card(name, description);
-        // TODO: throw eccezione per card già esistente già presente in server addcard
+        // TODO: Lanciare CardAlreadyExists se esiste già una card con lo stesso nome
         //if(getCard(name, Section.TODO) != null) return null;
         todo.add(card);
         return card;
@@ -138,22 +142,22 @@ public class Project {
 
     // Sposta la card da una lista ad un'altra
     public Card moveCard(String name, Section fromSection, Section toSection)
-            throws IllegalCardMovementException, CardNotFoundException {
+            throws CardNotFoundException, IllegalCardMovementException {
 
-        // Controllo se from e to rispettano i vincoli di spostamento delle card
-        // * -> *
+        // Controllo se <from> e <to> rispettano i vincoli di spostamento delle cards
+        // * -> * (Spostamento nella stessa lista di partenza)
         if(fromSection == toSection)
             throw new IllegalCardMovementException(fromSection.toString(),toSection.toString());
 
-        // * -> TODO
+        // * -> TODO (Spostamento nella lista TODO)
         if(toSection == Section.TODO)
             throw new IllegalCardMovementException(fromSection.toString(),toSection.toString());
 
-        // DONE -> *
+        // DONE -> * (Spostamento dalla lista DONE)
         if(fromSection == Section.DONE)
             throw new IllegalCardMovementException(fromSection.toString(),toSection.toString());
 
-        // TODO -> (TOBEREVISED|DONE)
+        // TODO -> (TOBEREVISED|DONE) (Spostamento da TODO a TOBEREVISED oppure DONE)
         if(fromSection == Section.TODO && toSection != Section.INPROGRESS)
             throw new IllegalCardMovementException(fromSection.toString(),toSection.toString());
 

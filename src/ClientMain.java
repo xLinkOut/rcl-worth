@@ -1,8 +1,5 @@
 // @author Luca Cirillo (545480)
 
-import WorthExceptions.ProjectNotFoundException;
-import WorthExceptions.UsernameAlreadyTakenException;
-
 import java.net.*;
 import java.util.*;
 import java.io.IOException;
@@ -17,6 +14,19 @@ import java.nio.charset.StandardCharsets;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
+// Eccezioni
+import WorthExceptions.ProjectNotFoundException;
+import WorthExceptions.UsernameAlreadyTakenException;
+
+// TODO: socketException nel costruttore
+// TODO: print di connessione avvenuta, solo se debug==true
+// TODO: print di connessione fallita e tutto quello prima di una sys.exit su std.err
+// TODO: tutte le e.getMessage() su std.err
+// TODO: accorpare operazione per creare nuovo chat listener
+// TODO: lanciare eccezioni in sendChatMsg
+// TODO: spiegare perchè si è messo prima online/offline in list user
+// TODO: orginare illegalargumentexception e ioexception
+// Client WORTH
 public class ClientMain extends RemoteObject implements NotifyEventInterface {
     // * TCP
     private static final int PORT_TCP = 6789;
@@ -28,7 +38,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
     private static ServerRMI server = null;
     private static NotifyEventInterface notifyStub;
     // * CLIENT
-    private static final boolean DEBUG = true; // Hardcoded
+    private static final boolean DEBUG = true;
     private static boolean logged = false;
     private static String username = "Guest";
     private static List<String> usersStatus;
@@ -147,14 +157,15 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
                                     try {
                                         // cmd[1] = username, nome utente dell'account che si vuole creare
                                         // cmd[2] = password, password di accesso scelta per l'account
-                                        if(cmd[1].contains(":")) throw new IllegalArgumentException("Colon character (:) not allowed in username");
-                                        if(cmd[2].contains(":")) throw new IllegalArgumentException("Colon character (:) not allowed in password");
+                                        if(cmd[1].contains(":"))
+                                            throw new IllegalArgumentException("Colon character (:) not allowed in username");
+                                        if(cmd[2].contains(":"))
+                                            throw new IllegalArgumentException("Colon character (:) not allowed in password");
                                         server.register(cmd[1], cmd[2]);
                                         // Registrazione avvenuta con successo
                                         System.out.println("Signup was successful!\nI try to automatically login to WORTH, wait..");
                                         // Provo ad effettuare il login automaticamente
                                         login(cmd[1], cmd[2]);
-
                                     } catch (ArrayIndexOutOfBoundsException | IllegalArgumentException e) {
                                         // Se almeno uno dei due parametri tra username e password non è presente
                                         // oppure risulta vuoto stampo l'help del comando register
@@ -187,7 +198,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
 
                                 case "quit":
                                     socketChannel.close();
-                                    System.out.println("Hope to see you soon, Guest!");
+                                    System.out.println("Hope to see you soon!");
                                     System.exit(0);
                                     break;
 
@@ -367,7 +378,10 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
 
                             case "quit":
                                 System.out.println("Hope to see you soon, "+username+"!");
-                                if(logged){ server.unregisterCallback(username,notifyStub); logout(); }
+                                if(logged){
+                                    server.unregisterCallback(username,notifyStub);
+                                    logout();
+                                }
                                 socketChannel.close();
                                 System.exit(0);
                                 break;
@@ -604,7 +618,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
 
     // Visualizza tutte le cards di un progetto, eventualmente in forma tabellare
     private void showCards(String projectName, boolean table)
-            throws IOException, IllegalArgumentException {
+            throws IllegalArgumentException, IOException {
         // Controllo validità dei parametri
         if(projectName.isEmpty()) throw new IllegalArgumentException("projectName");
         sendRequest("showCards "+username+" "+projectName);
@@ -618,26 +632,26 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
             // response[4] = DONE
 
             String[] todo        = response[1].substring(1,response[1].length()-1).split(", ");
-            String[] inprogress  = response[2].substring(1,response[2].length()-1).split(", ");
-            String[] toberevised = response[3].substring(1,response[3].length()-1).split(", ");
+            String[] inProgress  = response[2].substring(1,response[2].length()-1).split(", ");
+            String[] toBeRevised = response[3].substring(1,response[3].length()-1).split(", ");
             String[] done        = response[4].substring(1,response[4].length()-1).split(", ");
 
             if(table){
                 // Table header
                 System.out.format("|          %s         |       %s      |      %s      |          %s         |%n",
                                   "TODO","INPROGRESS","TOBERESIVED","DONE");
-                int maxLength = Math.max(todo.length,Math.max(inprogress.length,Math.max(toberevised.length, done.length)));
+                int maxLength = Math.max(todo.length,Math.max(inProgress.length,Math.max(toBeRevised.length, done.length)));
                 for(int i=0;i<maxLength;i++){
                     // TODO
                     try{ System.out.format("| %-22.21s",todo[i]);}
                     catch (ArrayIndexOutOfBoundsException ignored){System.out.format("|%-23.21s","");}
 
                     // INPROGRESS
-                    try{ System.out.format("| %-22.21s",inprogress[i]);}
+                    try{ System.out.format("| %-22.21s",inProgress[i]);}
                     catch (ArrayIndexOutOfBoundsException ignored){System.out.format("|%-23.21s","");}
 
                     // TOBEREVISED
-                    try{ System.out.format("| %-22.21s",toberevised[i]);}
+                    try{ System.out.format("| %-22.21s",toBeRevised[i]);}
                     catch (ArrayIndexOutOfBoundsException ignored){System.out.format("|%-23.21s","");}
 
                     // DONE
@@ -651,9 +665,9 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
                 System.out.println("TODO:");
                 for(String todoCard : todo) System.out.println("\t> "+todoCard);
                 System.out.println("INPROGRESS:");
-                for(String inProgressCard : inprogress) System.out.println("\t> "+inProgressCard);
+                for(String inProgressCard : inProgress) System.out.println("\t> "+inProgressCard);
                 System.out.println("TOBEREVISED:");
-                for(String toBeRevisedCard : toberevised) System.out.println("\t> "+toBeRevisedCard);
+                for(String toBeRevisedCard : toBeRevised) System.out.println("\t> "+toBeRevisedCard);
                 System.out.println("DONE:");
                 for(String doneCard : done) System.out.println("\t> "+doneCard);
             }
@@ -666,7 +680,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
 
     // Sposta una card dalla sezione in cui si trova attualmente ad un'altra
     private void moveCard(String projectName, String cardName, String from, String to)
-            throws IOException {
+            throws IllegalArgumentException, IOException {
         if(projectName.isEmpty()) throw new IllegalArgumentException("projectName");
         if(cardName.isEmpty()) throw new IllegalArgumentException("cardName");
         if(from.isEmpty()) throw new IllegalArgumentException("from");
@@ -683,9 +697,11 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
     }
 
     // Visualizza tutta la history di una card
-    private void getCardHistory(String projectName, String cardName) throws IOException {
+    private void getCardHistory(String projectName, String cardName)
+            throws IllegalArgumentException, IOException {
         if(projectName.isEmpty()) throw new IllegalArgumentException("projectName");
         if(cardName.isEmpty()) throw new IllegalArgumentException("cardName");
+
         sendRequest("getCardHistory "+username+" "+projectName+" "+cardName);
         String[] response = readResponse();
         if(response[0].equals("ok")){
@@ -695,12 +711,11 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
             if (DEBUG) System.out.print("["+response[1]+"] ");
             System.out.println(response[2]);
         }
-
     }
 
     // Legge i messaggi nella chat del progetto
     private void readChat(String projectName)
-            throws ProjectNotFoundException {
+            throws ProjectNotFoundException, IllegalArgumentException {
         if(projectName.isEmpty()) throw new IllegalArgumentException("projectName");
 
         if(!chats.containsKey(projectName)) throw new ProjectNotFoundException(projectName);
@@ -715,9 +730,10 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
 
     // Invia un nuovo messaggio sulla chat del progetto
     private void sendChatMsg(String projectName, String message)
-            throws ProjectNotFoundException {
+            throws IllegalArgumentException, ProjectNotFoundException {
         if(projectName.isEmpty()) throw new IllegalArgumentException("projectName");
         if(message.isEmpty()) throw new IllegalArgumentException("message");
+
         if(!chats.containsKey(projectName)) throw new ProjectNotFoundException(projectName);
 
         // (HH:MM) username: message
@@ -733,13 +749,14 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
         } catch (IOException e) {
             System.out.println("There was an error trying to send the message, please try again!");
         }
-
     }
 
     // Cancella il progetto se tutti i tasks sono stati svolti
     private void cancelProject(String projectName)
-            throws IOException,IllegalArgumentException {
+            throws IllegalArgumentException, IOException {
+
         if(projectName.isEmpty()) throw new IllegalArgumentException("projectName");
+
         sendRequest("cancelProject "+username+" "+projectName);
         String[] response = readResponse();
         if(response[0].equals("ok")){
@@ -767,7 +784,6 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
         // ○ == OFFLINE , ● == ONLINE
         for(String user : usersStatus)
             if(user.contains("OFFLINE"))
-                // Usare substring invece di split se metto prima lo status?
                 System.out.println("○ "+user.substring(8));
             else
                 System.out.println("● "+user.substring(7));

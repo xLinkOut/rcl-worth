@@ -1,16 +1,10 @@
 // @author Luca Cirillo (545480)
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.InjectableValues;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import WorthExceptions.*;
-
-import java.io.File;
 import java.net.*;
 import java.util.*;
-import java.io.IOException;
+import java.io.File;
 import java.nio.file.Path;
+import java.io.IOException;
 import java.nio.file.Paths;
 import java.nio.ByteBuffer;
 import java.nio.channels.*;
@@ -25,7 +19,29 @@ import java.nio.charset.StandardCharsets;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.concurrent.ConcurrentHashMap;
 
-@SuppressWarnings("AccessStaticViaInstance")
+// Jackson
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.InjectableValues;
+import com.fasterxml.jackson.databind.SerializationFeature;
+
+// Eccezioni
+import WorthExceptions.*;
+
+// TODO: liste principali nuovamente final?
+// TODO: mappare gli user con un dizionario?
+// TODO: traduzione di messaggi in inglese
+// TODO: togliere la sleep
+// TODO: computeIfAbsent
+// TODO: eliminare i residui di dipendenza circolare user<->project
+// TODO: ricontrollare tutte le .printStackTrace()
+// TODO: argomento da relazione: Ignoro tutti i comandi in eccedenza
+// TODO: implementare la threadpool per i chat listeners
+// TODO: chiudere tutte le connessioni allo shutdown
+// TODO: leggere tutto il messaggio che arriva dal client con un buffer e do/while
+
+@SuppressWarnings({"AccessStaticViaInstance", "ResultOfMethodCallIgnored"})
+// Server WORTH
 public class ServerMain extends RemoteObject implements ServerRMI{
     // * TCP
     private static final int PORT_TCP = 6789;
@@ -41,7 +57,7 @@ public class ServerMain extends RemoteObject implements ServerRMI{
     private static final boolean DEBUG = true;
     private static final Random random = new Random();
     private static final ObjectMapper jacksonMapper = new ObjectMapper()
-            .enable(SerializationFeature.INDENT_OUTPUT);
+            .enable(SerializationFeature.INDENT_OUTPUT); // Attiva il Pretty-Print
     private static Multicast multicast;
 
     // Restore <final> keyword
@@ -51,8 +67,7 @@ public class ServerMain extends RemoteObject implements ServerRMI{
 
     // Inizializza il sistema oppure ripristina l'ultima sessione
     public ServerMain(){
-        // Callback
-        super();
+        super(); // Callback
 
         // Persistenza
         try{
@@ -62,14 +77,10 @@ public class ServerMain extends RemoteObject implements ServerRMI{
                 if (DEBUG) System.out.println("System bootstrap");
                 // Costruisco l'albero di directories
                 // e creo i files config di default
-                // data/
-                Files.createDirectory(pathData);
-                // data/Projects/
-                Files.createDirectory(pathProjects);
-                // data/Users.json
-                Files.createFile(pathUsers);
-                // data/Multicast.json
-                Files.createFile(pathMulticast);
+                Files.createDirectory(pathData);     // data/
+                Files.createDirectory(pathProjects); // data/Projects/
+                Files.createFile(pathUsers);         // data/Users.json
+                Files.createFile(pathMulticast);     // data/Multicast.json
                 // Inizializzo l'oggetto Multicast
                 this.multicast = new Multicast();
                 // E ne salvo il contenuto di default su disco
@@ -78,7 +89,8 @@ public class ServerMain extends RemoteObject implements ServerRMI{
                 this.users = new ArrayList<>();
                 this.projects = new ConcurrentHashMap<>();
             }else {
-                // La directory "data/" esiste, probabilmente il sistema è già stato avviato prima d'ora
+                // La directory "data/" esiste, probabilmente
+                // il sistema è già stato avviato prima d'ora
                 // Cerco eventuali sessioni precedenti da ripristinare
 
                 // Se la directory "data/Projects/" esiste
@@ -89,28 +101,31 @@ public class ServerMain extends RemoteObject implements ServerRMI{
                     List<Path> subfolders = Files.walk(pathProjects, 1)
                             .filter(Files::isDirectory)
                             .collect(Collectors.toList());
-                    // Rimuovo il primo elemento, che corrisponde proprio alla cartella "data/Projects/"
+                    // Rimuovo il primo elemento, che corrisponde proprio
+                    // alla cartella "data/Projects/"
                     subfolders.remove(0);
 
                     // Per ogni progetto presente, ne ricostruisco la struttura
                     for (Path projectFolder : subfolders) {
                         // Mantengo il path diretto al file config del progetto
-                        Path projectConfigFile = Paths.get(projectFolder.toString() + "/" + projectFolder.getFileName() + ".json");
+                        Path projectConfigFile = Paths.get(
+                                projectFolder.toString()+"/"+projectFolder.getFileName()+".json");
+
                         // Se il file di progetto "<projectName>.json" non esiste,
                         // il progetto è corrotto e non posso ricostruirlo;
                         // provvedo quindi ad eliminarlo dal disco
                         if (Files.notExists(projectConfigFile)) {
-                            try {
-                                Files.walk(projectFolder)
-                                        .sorted(Comparator.reverseOrder())
-                                        .map(Path::toFile)
-                                        .forEach(File::delete);
+                            try {Files.walk(projectFolder)
+                                    .sorted(Comparator.reverseOrder())
+                                    .map(Path::toFile)
+                                    .forEach(File::delete);
                                 Files.delete(projectFolder);
                             } catch (IOException ignored) {
+                                System.err.println("Progetto corrotto cancellare manualmente");
                             }
                         }
 
-                        // Elenco tutti i files nella cartella, relativi alle card
+                        // Elenco tutti i files nella cartella, relativi alle cards
                         List<Path> projectFiles = Files.walk(projectFolder, 1)
                                 .filter(Files::isRegularFile)
                                 .collect(Collectors.toList());
@@ -122,16 +137,18 @@ public class ServerMain extends RemoteObject implements ServerRMI{
                         for (Path cardFile : projectFiles)
                             cards.add(jacksonMapper.readValue(Files.newBufferedReader(cardFile), Card.class));
 
-                        // Carico in memoria il progetto
-                        // Comando di Jackson che permette di "iniettare" oggetti esterni durante
-                        // la deserializzazione di un file json
+                        // Possibilità di Jackson di "iniettare" oggetti esterni durante
+                        // la deserializzazione di un file JSON
                         jacksonMapper.setInjectableValues(new InjectableValues.Std().addValue("cards", cards));
+                        // Carico in memoria il progetto
                         projects.put(
                                 projectFolder.getFileName().toString(), // Nome del progetto
                                 jacksonMapper.readValue(Files.newBufferedReader(projectConfigFile), Project.class)
                         );
                     }
+
                     if (DEBUG) System.out.println("Loaded " + this.projects.size() + " projects");
+
                 } else {
                     // Altrimenti creo la cartella per contenere i futuri progetti
                     Files.createDirectory(pathProjects);
@@ -144,29 +161,32 @@ public class ServerMain extends RemoteObject implements ServerRMI{
                 if (Files.exists(pathUsers) && Files.size(pathUsers) > 0) {
                     this.users = jacksonMapper.readValue(
                             Files.newBufferedReader(pathUsers),
-                            new TypeReference<List<User>>() {
-                            });
+                            new TypeReference<List<User>>(){});
                     if (DEBUG) System.out.println("Loaded " + this.users.size() + " users");
+
+                // Altrimenti inizializzo la struttura dati vuota
                 } else {
-                    // Altrimenti inizializzo la struttura dati vuota
                     this.users = new ArrayList<>();
                     if (DEBUG) System.out.println("No users found");
                 }
 
-                // Se il "data/Multicast.json" non esiste oppure è vuoto, ne creo uno di default
-                if (Files.notExists(pathMulticast) || Files.size(pathMulticast) == 0) {
-                    this.multicast = new Multicast();
-                    jacksonMapper.writeValue(Files.newBufferedWriter(pathMulticast), this.multicast);
-                // Altrimenti ne carico il contenuto nell'oggetto Multicast
-                }else{
+                // Se il "data/Multicast.json" esiste e non è vuoto, ne carico il contenuto
+                if(Files.exists(pathMulticast) && Files.size(pathMulticast) > 0){
                     this.multicast = jacksonMapper.readValue(Files.newBufferedReader(pathMulticast),Multicast.class);
-                    if (DEBUG) System.out.println("Last used multicast IP: "+this.multicast.getLastIP());
-                    if (DEBUG) System.out.println("There are "+this.multicast.getReleasedIP().size()+" free IP address");
+                    if (DEBUG) {
+                        System.out.println("Last used multicast IP: "+this.multicast.getLastIP());
+                        System.out.println("There are "+this.multicast.getReleasedIP().size()+" free IP address");
+                    }
+                }else{
+                    // Altrimenti ne creo uno di default
+                    this.multicast = new Multicast();
+                    // E lo salvo su disco
+                    jacksonMapper.writeValue(Files.newBufferedWriter(pathMulticast), this.multicast);
                 }
             }
 
             // Inizializzo la struttura dati utilizzata per le callbacks,
-            // che viene riempita solamente a runtime e non persiste sul filesystem
+            // che viene riempita solamente a runtime e non persiste sul disco
             this.clients = new LinkedHashMap<>();
 
         } catch (IOException ioe) {

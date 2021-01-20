@@ -6,31 +6,34 @@ import java.net.DatagramPacket;
 import java.net.MulticastSocket;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
+// TODO: dimensione del pacchetto?
+// TODO: Cambiare il testo dei messaggi su console
+// TODO: cambiare l'interfaccia con Queue
+// TODO: riunire tutto sotto lo stesso try/catch
+
+// Thread in ascolto sulla chat di progetto per ricevere i messaggi
 public class ChatListener implements Runnable{
 
-    // Indirizzo IP multicast del progetto
-    private final String multicastIP;
-    // Porta dedicata al progetto
-    private final int multicastPort;
-    // Coda in cui inserire i messaggi in ingresso
-    /* La ConcurrentLinkedQueue è unbounded, garantendo spazio a sufficienza per
-       immagazzinare messaggi in arrivo dagli altri utenti del progetto,
-       è thread-safe, permettendo la lettura da parte del thread Main dei messaggi
-       senza interferire con la scrittura di nuovi messaggi, ed infine
-       è una coda (FIFO), e permette di leggere in ordine i messaggi,
-       dal più vecchio al più recente. I nuovi messaggi vengono infatti inseriti
-       in coda, mentre la lettura inizia proprio dalla testa.
+    private final String multicastIP; // Indirizzo IP multicast del progetto
+    private final int multicastPort;  // Porta dedicata al progetto
+    /* La ConcurrentLinkedQueue è la struttura dati più adatta per mantenere
+       i messaggi in ingresso e permettere all'utente di leggerli in qualsiasi momento
+        - Unbounded: spazio a sufficienza per salvare i messaggi in arrivo;
+        - Thread-safe: la lettura da parte del thread Main non interferisce
+            con la scrittura di nuovi messaggi;
+        - Coda: messaggi salvati in ordine (FIFO).
     */
-    private final ConcurrentLinkedQueue<String> messagesQueue;
+    private final ConcurrentLinkedQueue<String> messagesQueue; // Coda dei messaggi in ingresso
 
-    public ChatListener(String multicastIP, int multicastPort, ConcurrentLinkedQueue<String> messagesQueue) {
+    public ChatListener(String multicastIP, int multicastPort,
+                        ConcurrentLinkedQueue<String> messagesQueue) {
         this.multicastIP = multicastIP;
         this.multicastPort = multicastPort;
         this.messagesQueue = messagesQueue;
     }
 
+    // Getters
     public String getMulticastIP(){ return this.multicastIP; }
-
     public int getMulticastPort(){ return this.multicastPort; }
 
     @Override
@@ -42,12 +45,12 @@ public class ChatListener implements Runnable{
         try {
             inetAddress = InetAddress.getByName(multicastIP);
             multicastSocket = new MulticastSocket(multicastPort);
-            // Unisco al gruppo
+            // Mi unisco al gruppo
             multicastSocket.joinGroup(inetAddress);
             packet = new DatagramPacket(new byte[8192],8192);
-        } catch (IOException e) {
-            e.printStackTrace();
-           System.out.println("Qualcosa è andato storto mentre provavo a raggiungere la chat di progetto...");
+        } catch (IOException ioe) {
+            ioe.printStackTrace();
+            System.out.println("Qualcosa è andato storto mentre provavo a raggiungere la chat di progetto...");
         }
 
         // Controllo "ridondante" per evitare warning
@@ -63,14 +66,17 @@ public class ChatListener implements Runnable{
                 // Li aggiungo alla coda
                 messagesQueue.add(new String(packet.getData(),0,packet.getLength()));
             }
-        } catch (IOException e) { System.out.println("Qualcosa è andato storto mentre aspettavo messaggi sulla chat..."); }
+        } catch (IOException ioe) {
+            System.out.println("Qualcosa è andato storto mentre aspettavo messaggi sulla chat...");
+        }
 
 
-        // Alla fine, abbandono il gruppo
-        try { multicastSocket.leaveGroup(inetAddress);
+        try {
+            // Alla fine, abbandono il gruppo
+            multicastSocket.leaveGroup(inetAddress);
+            // e chiudo il socket
+            multicastSocket.close();
         } catch (IOException ignored) {}
 
-        // e chiudo il socket
-        multicastSocket.close();
     }
 }

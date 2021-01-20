@@ -1,10 +1,11 @@
 // @author Luca Cirillo (545480)
 
+// Jackson
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-// Identifica un utente del sistema WORTH
+// Utente del sistema WORTH
 public class User {
 
     // Possibili stati dell'utente
@@ -12,11 +13,11 @@ public class User {
 
     private final String username; // Username dell'utente, univoco nel sistema
     private final String password; // Password dell'utente
-    @JsonIgnore // Informazione che non deve persistere, sempre offline all'avvio
+    @JsonIgnore // Informazione che non deve persistere, sempre offline all'avvio del server
     private Status status = Status.OFFLINE; // Stato dell'utente
 
 
-    @JsonCreator // Costruttore per Jackson
+    @JsonCreator // Costruttore condiviso con Jackson
     public User(@JsonProperty("username") String username,
                 @JsonProperty("password") String password){
         this.username = username;
