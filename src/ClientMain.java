@@ -1,6 +1,5 @@
 // @author Luca Cirillo (545480)
 
-import com.google.gson.Gson;
 import WorthExceptions.ProjectNotFoundException;
 import WorthExceptions.UsernameAlreadyTakenException;
 
@@ -31,7 +30,6 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
     // * CLIENT
     private static final boolean DEBUG = true; // Hardcoded
     private static boolean logged = false;
-    private static final Gson gson = new Gson();
     private static String username = "Guest";
     private static List<String> usersStatus;
     private static DatagramSocket multicastSocket;

@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import com.google.gson.*;
 import WorthExceptions.*;
 
 import java.io.File;
@@ -26,7 +25,7 @@ import java.nio.charset.StandardCharsets;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.concurrent.ConcurrentHashMap;
 
-@SuppressWarnings({"ReadWriteStringCanBeUsed", "AccessStaticViaInstance"})
+@SuppressWarnings("AccessStaticViaInstance")
 public class ServerMain extends RemoteObject implements ServerRMI{
     // * TCP
     private static final int PORT_TCP = 6789;
@@ -41,7 +40,6 @@ public class ServerMain extends RemoteObject implements ServerRMI{
     // * SERVER
     private static final boolean DEBUG = true;
     private static final Random random = new Random();
-    private static final Gson gson = new Gson();
     private static final ObjectMapper jacksonMapper = new ObjectMapper()
             .enable(SerializationFeature.INDENT_OUTPUT);
     private static Multicast multicast;
@@ -302,7 +300,7 @@ public class ServerMain extends RemoteObject implements ServerRMI{
                                                 +createProject(cmd[1],cmd[2]));
                                     } catch (ProjectNameAlreadyInUse pnaiue) {
                                         key.attach("ko:409:The name chosen for the project is already in use, try another one!");
-                                    } catch (NoMulticastAddressAvailableException e) {
+                                    } catch (NoMulticastAddressAvailableException nmaae) {
                                         key.attach("ko:507:There are no more IP addresses available for creating a new project! Please try again later, new ones may be released");
                                     }
                                     break;
