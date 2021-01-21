@@ -830,7 +830,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
             // Finché ci sono bytes da leggere, continuo
         } while (bytesRead >= 1024);
 
-        if (DEBUG) System.out.println("Server@WORTH < "+serverResponse.toString()+"\n");
+        if (DEBUG) System.out.println("Server@WORTH < "+serverResponse.toString());
         return serverResponse.toString().split(":");
     }
 
@@ -848,8 +848,10 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
     public void notifyEvent(String message)
             throws RemoteException {
         // Notifico l'utente e ripristino la shell
-        System.out.println("\n"+message);
-        System.out.print(username+"@WORTH > ");
+        if(!message.equals("")){
+            System.out.println("\n"+message);
+            System.out.print(username+"@WORTH > ");
+        }
     }
 
     @Override
@@ -892,7 +894,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
     // Il server notifica il client con la lista degli utenti del sistema ed il loro stato
     public void notifyUsers(List<String> users)
             throws RemoteException {
-        if (DEBUG) System.out.println(users);
+        if (DEBUG){ System.out.println(users); System.out.print(username+"@WORTH > "); }
         // Preparo la lista di utenti per l'aggiornamento, eliminando tutti i vecchi record
         usersStatus.clear();
         // Aggiungo le nuove coppie <utente, stato> alla lista

@@ -74,9 +74,8 @@ public class ServerMain extends RemoteObject implements ServerRMI{
             // Se la directory "data/" non esiste,
             // probabilmente è il primo avvio del sistema
             if(Files.notExists(pathData)){
-                if (DEBUG) System.out.println("System bootstrap");
-                // Costruisco l'albero di directories
-                // e creo i files config di default
+                if (DEBUG) System.out.println("System bootstrap: initialization of files and system structures");
+                // Costruisco l'albero di directories e creo i files config di default
                 Files.createDirectory(pathData);     // data/
                 Files.createDirectory(pathProjects); // data/Projects/
                 Files.createFile(pathUsers);         // data/Users.json
@@ -250,8 +249,8 @@ public class ServerMain extends RemoteObject implements ServerRMI{
                 // Seleziona un insieme di keys che corrispondono a canali pronti ad eseguire operazioni
                 Thread.sleep(300); // Limita overhead
                 selector.select();
-            } catch (IOException ioe) { ioe.printStackTrace(); break;
-            } catch (InterruptedException ie) { ie.printStackTrace(); }
+            } catch (IOException ioe) { if (DEBUG) ioe.printStackTrace(); break;
+            } catch (InterruptedException ie) { if (DEBUG) ie.printStackTrace(); }
 
             // Iteratore sui canali che risultano pronti
             Iterator<SelectionKey> iterator = selector.selectedKeys().iterator();
@@ -266,6 +265,7 @@ public class ServerMain extends RemoteObject implements ServerRMI{
                 try {
 
                     // Un canale pronto ad accettare una nuova connessione
+                    // (Client connesso)
                     if (key.isAcceptable()) {
                         ServerSocketChannel socket = (ServerSocketChannel) key.channel();
                         // Accetto la connessione
@@ -292,7 +292,7 @@ public class ServerMain extends RemoteObject implements ServerRMI{
                                     try {
                                         // cmd[1] = username, nome utente del proprio account
                                         // cmd[2] = password, password del proprio account
-                                        key.attach("ok:Great! Now your are logged as "+cmd[1]+"!:"+login(cmd[1], cmd[2]));
+                                        key.attach("ok:Now your are logged as "+cmd[1]+"!:"+login(cmd[1], cmd[2]));
                                     } catch (AuthenticationFailException afe) {
                                         key.attach("ko:401:The password you entered is incorrect, please try again");
                                     } catch (UserNotFoundException unfe) {
@@ -458,6 +458,11 @@ public class ServerMain extends RemoteObject implements ServerRMI{
                                         key.attach("ko:412:Not all cards are in the done list. There is still work to be done!");
                                     }
 
+                                // Disconnessione "hard" del client (processo interrotto)
+                                case "":
+                                    // Imposto lo stato dell'utente disconnesso su OFFLINE
+                                    pingPong();
+                                    break;
                             }
                         }
                         key.interestOps(SelectionKey.OP_WRITE);
@@ -924,11 +929,11 @@ public class ServerMain extends RemoteObject implements ServerRMI{
     }
 
     private List<Project> getUserProjects(String username){
-        //User user = getUser(username);
         return projects.values().stream()
                 .filter(project -> project.getMembers().contains(username))
                 .collect(Collectors.toList());
     }
+
     // * CALLBACKS
 
     @Override
@@ -973,6 +978,28 @@ public class ServerMain extends RemoteObject implements ServerRMI{
         // invio la lista di utenti ed il loro stato
         for(Map.Entry<String, NotifyEventInterface> client : clients.entrySet())
             client.getValue().notifyUsers(usersStatus);
+    }
+
+    // Se si verifica una disconnessione forzata di un client
+    // "sondo" la rete per impostare lo stato del relativo utente su OFFLINE
+    // Quindi invio le callback per aggiornare i clients sullo stato degli utenti
+    private void pingPong() {
+        for(Map.Entry<String, NotifyEventInterface> client : clients.entrySet()) {
+            try {
+                client.getValue().notifyEvent("");
+            } catch (RemoteException re) {
+                // Imposto lo stato dell'utente su OFFLINE
+                getUser(client.getKey()).setStatus(User.Status.OFFLINE);
+                // Rimuovo l'interfaccia per le callback
+                clients.remove(client.getKey(), client.getValue());
+                // Ho trovato il client disconnesso, mi fermo
+                break;
+            }
+        }
+
+        // Aggiorno tutti gli altri clients
+        try { sendCallback();
+        } catch (RemoteException re) { if (DEBUG) re.printStackTrace(); }
     }
 
     // * MAIN
