@@ -297,6 +297,8 @@ public class ServerMain extends RemoteObject implements ServerRMI{
                                         key.attach("ko:401:The password you entered is incorrect, please try again");
                                     } catch (UserNotFoundException unfe) {
                                         key.attach("ko:404:Are you sure that an account with this name exists?\nIf you need one, use register command");
+                                    } catch (AlreadyLoggedException ale) {
+                                        key.attach("ko:409:A session has already been started with this account, use that or logout first");
                                     }
                                     break;
 
@@ -522,7 +524,7 @@ public class ServerMain extends RemoteObject implements ServerRMI{
 
     // Permette ad un utente di utilizzare il sistema, segnando il suo stato come ONLINE
     private String login(String username, String password)
-            throws UserNotFoundException, AuthenticationFailException {
+            throws UserNotFoundException, AuthenticationFailException, AlreadyLoggedException {
         if(DEBUG) System.out.println("Server@WORTH > login "+username+" "+password);
 
         // Controllo l'esistenza dell'utente
@@ -530,9 +532,13 @@ public class ServerMain extends RemoteObject implements ServerRMI{
 
         // Recupero le informazioni dell'utente
         User user = getUser(username);
-
+        
         // Controllo se la password è corretta
         if(!user.auth(password)) throw new AuthenticationFailException(password);
+
+        // Controllo che l'utente non sia già connesso
+        // (non sono ammessi login multipli)
+        if(user.getStatus() == User.Status.ONLINE) throw new AlreadyLoggedException();
 
         // Aggiorno il suo stato su Online
         user.setStatus(User.Status.ONLINE);
