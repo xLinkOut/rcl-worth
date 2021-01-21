@@ -36,7 +36,7 @@ import WorthExceptions.*;
 // TODO: eliminare i residui di dipendenza circolare user<->project
 // TODO: ricontrollare tutte le .printStackTrace()
 // TODO: argomento da relazione: Ignoro tutti i comandi in eccedenza
-// TODO: implementare la threadpool per i chat listeners
+// TODO: implementare la thread pool per i chat listeners
 // TODO: chiudere tutte le connessioni allo shutdown
 // TODO: leggere tutto il messaggio che arriva dal client con un buffer e do/while
 
@@ -161,7 +161,7 @@ public class ServerMain extends RemoteObject implements ServerRMI{
                 if (Files.exists(pathUsers) && Files.size(pathUsers) > 0) {
                     this.users = jacksonMapper.readValue(
                             Files.newBufferedReader(pathUsers),
-                            new TypeReference<List<User>>(){});
+                            new TypeReference<>() {});
                     if (DEBUG) System.out.println("Loaded " + this.users.size() + " users");
 
                 // Altrimenti inizializzo la struttura dati vuota
@@ -248,7 +248,7 @@ public class ServerMain extends RemoteObject implements ServerRMI{
         while (true) {
             try {
                 // Seleziona un insieme di keys che corrispondono a canali pronti ad eseguire operazioni
-                Thread.sleep(300); // Limita overhead mentre debuggo
+                Thread.sleep(300); // Limita overhead
                 selector.select();
             } catch (IOException ioe) { ioe.printStackTrace(); break;
             } catch (InterruptedException ie) { ie.printStackTrace(); }
@@ -257,9 +257,9 @@ public class ServerMain extends RemoteObject implements ServerRMI{
             Iterator<SelectionKey> iterator = selector.selectedKeys().iterator();
 
             while (iterator.hasNext()) {
-                // Prendo dall'iteratore la prossima key
+                // Prendo la prossima key
                 SelectionKey key = iterator.next();
-                // La rimuovo esplicitamente dall'iteratore
+                // La rimuovo esplicitamente
                 iterator.remove();
 
                 // Se la key considerata identifica:
@@ -679,9 +679,6 @@ public class ServerMain extends RemoteObject implements ServerRMI{
         Project project = projects.get(projectName);
         // Se l'utente è un membro del progetto, può consultare la lista membri
         if(project.getMembers().contains(username))
-            //return project.getMembers().stream()
-            //    .map(User::getUsername)
-            //    .collect(Collectors.toList()).toString();
             return project.getMembers().toString();
         else throw new ForbiddenException();
     }
@@ -831,14 +828,6 @@ public class ServerMain extends RemoteObject implements ServerRMI{
             // (compreso l'utente che ha richiesto la cancellazione)
             // e notifica subito l'utente dell'evento
             for(String user : project.getMembers()) {
-                //user.removeProject(project);
-                //try {
-                //    jacksonMapper.writeValue(Files.newBufferedWriter(pathUsers), users);
-                //} catch (IOException ioe) {
-                //    if (DEBUG) ioe.printStackTrace();
-                //    System.err.println("I was unable to save user information on the filesystem, on next restart they will probably be lost ...");
-                //}
-                // TODO: eliminare se si riesce a togliere la dipendenza da user.projects
                 // TODO: non inviare la notifica alla stessa persona che ha cancellato il progetto
                 try { clients.get(user).notifyEvent(
                         "Ding! "+username+" ha cancellato il progetto "+projectName);

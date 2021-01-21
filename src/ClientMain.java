@@ -18,15 +18,10 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import WorthExceptions.ProjectNotFoundException;
 import WorthExceptions.UsernameAlreadyTakenException;
 
-// TODO: socketException nel costruttore
-// TODO: print di connessione avvenuta, solo se debug==true
-// TODO: print di connessione fallita e tutto quello prima di una sys.exit su std.err
-// TODO: tutte le e.getMessage() su std.err
 // TODO: accorpare operazione per creare nuovo chat listener
-// TODO: lanciare eccezioni in sendChatMsg
-// TODO: spiegare perchè si è messo prima online/offline in list user
-// TODO: orginare illegalargumentexception e ioexception
+
 // Client WORTH
+@SuppressWarnings({"AccessStaticViaInstance", "DuplicateThrows"})
 public class ClientMain extends RemoteObject implements NotifyEventInterface {
     // * TCP
     private static final int PORT_TCP = 6789;
@@ -92,13 +87,14 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
 
         // Chats
         this.chats = new HashMap<>();
+        this.usersStatus = new LinkedList<>();
         this.chatListeners = new LinkedHashMap<>();
         this.projectMulticastIP = new LinkedHashMap<>();
-        this.usersStatus = new LinkedList<>();
         try {
             this.multicastSocket = new DatagramSocket();
         } catch (SocketException se) {
-            se.printStackTrace();
+            if (DEBUG) se.printStackTrace();
+            System.err.println("Failed to initialize project chats!");
             System.exit(-1);
         }
     }
@@ -107,6 +103,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
     private void run(){
         // Messaggio di avvio
         System.out.println(msgStartup);
+        System.out.println("Connection attempt, wait...");
 
         try {
             // * TCP Setup
@@ -115,9 +112,9 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
                 socketChannel = SocketChannel.open();
                 // Connetto al server sul canale appena creato
                 socketChannel.connect(new InetSocketAddress(IP_SERVER, PORT_TCP));
-                System.out.println("[TCP] Connected to: " + socketChannel.getRemoteAddress());
+                if (DEBUG) System.out.println("[TCP] Connected to: " + socketChannel.getRemoteAddress());
             }catch (ConnectException ce){
-                System.out.println("[TCP] connection refused, are you sure that server is up?");
+                System.err.println("[TCP] connection refused, are you sure that server is up?");
                 System.exit(-1);
             }
 
@@ -127,13 +124,13 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
                 Registry registry = LocateRegistry.getRegistry(PORT_RMI);
                 // Chiamo la lookup sullo stesso nome del server
                 server = (ServerRMI) registry.lookup(NAME_RMI);
-                System.out.println("[RMI] Connected to: " + NAME_RMI);
+                if (DEBUG) System.out.println("[RMI] Connected to: " + NAME_RMI);
                 // Esporto l'oggetto Client per le callback
                 notifyStub = (NotifyEventInterface)
                         UnicastRemoteObject.exportObject(this,0);
                 //server.registerCallback(stub);
             } catch (NotBoundException nbe) {
-                System.out.println("[RMI] connection refused, are you sure that server is up?");
+                System.err.println("[RMI] connection refused, are you sure that server is up?");
                 System.exit(-1);
             }
 
@@ -170,6 +167,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
                                         // Se almeno uno dei due parametri tra username e password non è presente
                                         // oppure risulta vuoto stampo l'help del comando register
                                         if (DEBUG) System.out.println(e.getMessage());
+                                        // Visualizzo però, anche se DEBUG == False, il messaggio della exception se riguarda i vincoli sul nome
                                         else if (e.getMessage().contains("Colon")) System.out.println(e.getMessage());
                                         System.out.println("Usage: register username password");
                                     } catch (UsernameAlreadyTakenException uate) {
@@ -208,7 +206,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
                             }
                         } else { System.out.println(msgHelpGuest); }
                     }catch (IOException ioe){
-                        System.out.println("WORTH seems to be unreachable... try again in a few moments, apologize for the inconvenience.");
+                        System.err.println("WORTH server seems to be unreachable... try again in a few moments.");
                         System.exit(-1);
                     }
                 }
@@ -373,6 +371,10 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
                                 } catch (ArrayIndexOutOfBoundsException | IllegalArgumentException e) {
                                     if (DEBUG) System.out.println(e.getMessage());
                                     System.out.println("Usage: sendChatMsg projectName message");
+                                } catch (UnknownHostException e) {
+                                    System.out.println("I'm not sure if I have the correct address for the project "+cmd[1]+" chat, please try to log out and then log in again");
+                                } catch (IOException e) {
+                                    System.out.println("There was an error trying to send the message, please try again!");
                                 }
                                 break;
 
@@ -391,11 +393,13 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
                                 System.out.println(msgHelp);
                         }
                     }else{ System.out.println(msgHelp); }
-                } catch (IOException ioe){ioe.printStackTrace();}
+                } catch (IOException ioe){
+                    if (DEBUG) ioe.printStackTrace();
+                }
             }
 
         } catch (IOException ioe) {
-            System.out.println("WORTH seems to be unreachable... try again in a few moments, apologize for the inconvenience.");
+            System.err.println("WORTH server seems to be unreachable... try again in a few moments.");
             System.exit(-1);
         }
     }
@@ -730,7 +734,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
 
     // Invia un nuovo messaggio sulla chat del progetto
     private void sendChatMsg(String projectName, String message)
-            throws IllegalArgumentException, ProjectNotFoundException {
+            throws IllegalArgumentException, ProjectNotFoundException, UnknownHostException, IOException {
         if(projectName.isEmpty()) throw new IllegalArgumentException("projectName");
         if(message.isEmpty()) throw new IllegalArgumentException("message");
 
@@ -738,17 +742,11 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
 
         // (HH:MM) username: message
         String formattedMessage = getTime()+" "+username+": "+message;
-        try {
-            ChatListener multicastInfo = projectMulticastIP.get(projectName);
-            multicastSocket.send(new DatagramPacket(
-                    formattedMessage.getBytes(StandardCharsets.UTF_8), formattedMessage.length(),
-                    InetAddress.getByName(multicastInfo.getMulticastIP()), multicastInfo.getMulticastPort()));
-            System.out.println("Message sent!");
-        } catch (UnknownHostException e) {
-            System.out.println("I'm not sure if I have the correct address for the project "+projectName+" chat, please try to log out and then log in again");
-        } catch (IOException e) {
-            System.out.println("There was an error trying to send the message, please try again!");
-        }
+        ChatListener multicastInfo = projectMulticastIP.get(projectName);
+        multicastSocket.send(new DatagramPacket(
+                formattedMessage.getBytes(StandardCharsets.UTF_8), formattedMessage.length(),
+                InetAddress.getByName(multicastInfo.getMulticastIP()), multicastInfo.getMulticastPort()));
+        System.out.println("Message sent!");
     }
 
     // Cancella il progetto se tutti i tasks sono stati svolti
@@ -894,7 +892,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
     // Il server notifica il client con la lista degli utenti del sistema ed il loro stato
     public void notifyUsers(List<String> users)
             throws RemoteException {
-        //System.out.println(users);
+        if (DEBUG) System.out.println(users);
         // Preparo la lista di utenti per l'aggiornamento, eliminando tutti i vecchi record
         usersStatus.clear();
         // Aggiungo le nuove coppie <utente, stato> alla lista
