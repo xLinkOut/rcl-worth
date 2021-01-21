@@ -15,6 +15,7 @@ import java.rmi.server.UnicastRemoteObject;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 // Eccezioni
+import WorthExceptions.NameAlreadyInUse;
 import WorthExceptions.ProjectNotFoundException;
 import WorthExceptions.UsernameAlreadyTakenException;
 
@@ -285,6 +286,9 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
                                     if (DEBUG) System.out.println(e.getMessage());
                                     else if (e.getMessage().contains("Colon")) System.out.println(e.getMessage());
                                     System.out.println("Usage: addCard projectName cardName cardCaption");
+                                } catch (NameAlreadyInUse naiue) {
+                                    if (DEBUG) System.out.println(naiue.getMessage());
+                                    System.out.println("Card name cannot be the same as project name!");
                                 }
                                 break;
 
@@ -585,11 +589,12 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
 
     // Aggiunge una nuova card ad un progetto di cui è membro
     private void addCard(String projectName, String cardName, String cardDescription)
-            throws IllegalArgumentException, IOException {
+            throws NameAlreadyInUse, IllegalArgumentException, IOException {
         // Controllo validità dei parametri
         if(projectName.isEmpty()) throw new IllegalArgumentException("projectName");
         if(cardName.isEmpty()) throw new IllegalArgumentException("cardName");
         if(cardDescription.isEmpty()) throw new IllegalArgumentException("cardDescription");
+        if(cardName.equals(projectName)) throw new NameAlreadyInUse(cardName);
 
         sendRequest("addCard "+username+" "+projectName+" "+cardName+" "+cardDescription);
         String[] response = readResponse();

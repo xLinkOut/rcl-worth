@@ -318,7 +318,7 @@ public class ServerMain extends RemoteObject implements ServerRMI{
                                         key.attach("ok:Project "+cmd[2]+" created!\nCurrently you're the only member. " +
                                                 "Try use addMember to invite some coworkers:"
                                                 +createProject(cmd[1],cmd[2]));
-                                    } catch (ProjectNameAlreadyInUse pnaiue) {
+                                    } catch (NameAlreadyInUse pnaiue) {
                                         key.attach("ko:409:The name chosen for the project is already in use, try another one!");
                                     } catch (NoMulticastAddressAvailableException nmaae) {
                                         key.attach("ko:507:There are no more IP addresses available for creating a new project! Please try again later, new ones may be released");
@@ -590,12 +590,12 @@ public class ServerMain extends RemoteObject implements ServerRMI{
 
     // Un utente richiede la creazione di un nuovo progetto
     private String createProject(String username, String projectName)
-            throws ProjectNameAlreadyInUse, NoMulticastAddressAvailableException {
+            throws NameAlreadyInUse, NoMulticastAddressAvailableException {
 
         if(DEBUG) System.out.println("Server@WORTH > createProject "+username+" "+projectName);
 
         // Controllare che non esista già un progetto con lo stesso nome
-        if(projects.containsKey(projectName)) throw new ProjectNameAlreadyInUse(projectName);
+        if(projects.containsKey(projectName)) throw new NameAlreadyInUse(projectName);
 
         // Creo un nuovo progetto e lo aggiungo al database
         //User user = getUser(username);
@@ -712,7 +712,8 @@ public class ServerMain extends RemoteObject implements ServerRMI{
         // TODO avviso
         } catch (IOException e) { e.printStackTrace(); }
     }
-        // Restituisce le informazioni su una card di un progetto
+
+    // Restituisce le informazioni su una card di un progetto
     private String showCard(String username, String projectName, String cardName)
             throws CardNotFoundException, ForbiddenException, ProjectNotFoundException {
         if(DEBUG) System.out.println("Server@WORTH > showCard "+username+" "+projectName+" "+cardName);
