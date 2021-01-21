@@ -493,7 +493,7 @@ public class ServerMain extends RemoteObject implements ServerRMI{
     // * ENDPOINTS
 
     // Registra un nuovo utente nel sistema
-    public void register(String username, String password)
+    public synchronized void register(String username, String password)
             throws RemoteException, IllegalArgumentException, UsernameAlreadyTakenException {
 
         // Controllo validità dei parametri
