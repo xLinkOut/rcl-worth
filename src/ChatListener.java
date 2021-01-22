@@ -60,7 +60,7 @@ public class ChatListener implements Runnable{
         }
 
         try{
-            while(true) {
+            while(!Thread.currentThread().isInterrupted()) {
                 // Ricevo nuovi messaggi da altri utenti
                 multicastSocket.receive(packet);
                 // Li aggiungo alla coda
