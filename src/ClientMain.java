@@ -740,9 +740,10 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
             // Interrompo il thread che sta in ascolto sulla chat di questo progetto
             chatListeners.get(projectName).cancel(true);
             // Invio un ultimo messaggio per "sbloccare" la receive
-            try { sendChatMsg(projectName, "shutdown");
-            } catch (ProjectNotFoundException e) { e.printStackTrace(); }
-
+            ChatListener multicastInfo = projectMulticastIP.get(projectName);
+            multicastSocket.send(new DatagramPacket(
+                    "shutdown".getBytes(StandardCharsets.UTF_8), "shutdown".length(),
+                    InetAddress.getByName(multicastInfo.getMulticastIP()), multicastInfo.getMulticastPort()));
             // Rimuovo dalle liste locali tutti i riferimenti al progetto appena cancellato
             // La coda in cui sono immagazzinati i messaggi
             chats.remove(projectName);
@@ -859,7 +860,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
 
     @Override
     // Il server notifica il client di essere stato aggiunto ad un progetto
-    public void notifyProject(String multicastInfo, String fromWho)
+    public void notifyNewProject(String multicastInfo, String fromWho)
             throws RemoteException {
         // L'utente è stato aggiunto ad un nuovo progetto e deve
         // sincronizzare le proprie informazioni multicast per
@@ -871,7 +872,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
         createChatListener(projectData);
 
         // Notifico l'utente e ripristino la shell
-        System.out.println("\nDing! Sei stato aggiunto al progetto "+projectData[0]+ " da "+fromWho);
+        System.out.println("\nDing! You have been added to the project "+projectData[0]+ " of "+fromWho);
         System.out.print(username+"@WORTH > ");
 
     }
@@ -880,11 +881,35 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
     // Il server notifica il client con la lista degli utenti del sistema ed il loro stato
     public void notifyUsers(List<String> users)
             throws RemoteException {
-        if (DEBUG){ System.out.println(users); System.out.print(username+"@WORTH > "); }
+        if (DEBUG){ System.out.println(users); System.out.print(this.username+"@WORTH > "); }
         // Preparo la lista di utenti per l'aggiornamento, eliminando tutti i vecchi record
         usersStatus.clear();
         // Aggiungo le nuove coppie <utente, stato> alla lista
         usersStatus.addAll(users);
+    }
+
+    @Override
+    public void notifyCancelProject(String projectName, String username)
+        throws RemoteException{
+        try {
+            // Interrompo il thread che sta in ascolto sulla chat di questo progetto
+            chatListeners.get(projectName).cancel(true);
+            // Invio un ultimo messaggio per "sbloccare" la receive
+            ChatListener multicastInfo = projectMulticastIP.get(projectName);
+            multicastSocket.send(new DatagramPacket(
+                    "shutdown".getBytes(StandardCharsets.UTF_8), "shutdown".length(),
+                    InetAddress.getByName(multicastInfo.getMulticastIP()), multicastInfo.getMulticastPort()));
+            // Rimuovo dalle liste locali tutti i riferimenti al progetto appena cancellato
+            // La coda in cui sono immagazzinati i messaggi
+            chats.remove(projectName);
+            // Il task listener che si occupava di accodare i messaggi
+            chatListeners.remove(projectName);
+            // Il riferimento al thread in ascolto sulla chat
+            projectMulticastIP.remove(projectName);
+            // Infine, stampo un messaggio di conferma e ripristino la shell
+            System.out.println("Ding! "+username+" has canceled the project "+projectName);
+            System.out.print(this.username+"@WORTH > ");
+        } catch (IOException ioe) { if (DEBUG) ioe.printStackTrace(); }
     }
 
     // * MAIN

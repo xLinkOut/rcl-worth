@@ -23,11 +23,20 @@ public interface NotifyEventInterface extends Remote {
        nessun messaggio. Viene contestualmente inviato il nome dell'utente
        da cui è arrivato l'invito.
      */
-    void notifyProject(String multicastInfo, String fromWho)
+    void notifyNewProject(String multicastInfo, String fromWho)
             throws RemoteException;
 
+    /* Permette di notificare un utente quando un membro di un progetto di cui
+       l'utente fa parte, richiede la cancellazione del progetto. Il client
+       può così sincronizzare la cancellazione dei riferimenti locali del progetto,
+       nonché interrompere il thread che altrimenti rimarrebbe in ascolto sulla chat.
+       L'utente riceve inoltre una notifica testuale.
+     */
+    void notifyCancelProject(String projectName, String username)
+        throws RemoteException;
+
     /* Funzione generica che permette al server di notificare il client
-       quando si verifica un evento, inviando il relativo messaggio
+       quando si verifica un evento, inviando il relativo messaggio.
      */
     void notifyEvent(String message)
         throws RemoteException;
