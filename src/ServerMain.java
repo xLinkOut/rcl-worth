@@ -534,7 +534,7 @@ public class ServerMain extends RemoteObject implements ServerRMI{
         User user = getUser(username);
         
         // Controllo se la password è corretta
-        if(!user.auth(password)) throw new AuthenticationFailException(password);
+        if(!user.authentication(password)) throw new AuthenticationFailException(password);
 
         // Controllo che l'utente non sia già connesso
         // (non sono ammessi login multipli)
