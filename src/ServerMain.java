@@ -998,7 +998,7 @@ public class ServerMain extends RemoteObject implements ServerRMI{
                 client.getValue().notifyEvent("");
             } catch (RemoteException re) {
                 // Imposto lo stato dell'utente su OFFLINE
-                getUser(client.getKey()).setStatus(User.Status.OFFLINE);
+                Objects.requireNonNull(getUser(client.getKey())).setStatus(User.Status.OFFLINE);
                 // Rimuovo l'interfaccia per le callback
                 clients.remove(client.getKey(), client.getValue());
                 // Ho trovato il client disconnesso, mi fermo
