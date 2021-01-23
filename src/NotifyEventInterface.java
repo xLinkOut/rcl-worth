@@ -35,8 +35,8 @@ public interface NotifyEventInterface extends Remote {
     void notifyCancelProject(String projectName, String username)
         throws RemoteException;
 
-    /* Funzione generica che permette al server di notificare il client
-       quando si verifica un evento, inviando il relativo messaggio.
+    /* Permette al server di inviare una notifica e relativo messaggio
+       ad un client quando si verifica un evento.
      */
     void notifyEvent(String message)
         throws RemoteException;

@@ -35,10 +35,8 @@ import javax.swing.plaf.synth.SynthLookAndFeel;
 // TODO: traduzione di messaggi in inglese
 // TODO: togliere la sleep
 // TODO: computeIfAbsent
-// TODO: eliminare i residui di dipendenza circolare user<->project
 // TODO: ricontrollare tutte le .printStackTrace()
 // TODO: argomento da relazione: Ignoro tutti i comandi in eccedenza
-// TODO: implementare la thread pool per i chat listeners
 // TODO: chiudere tutte le connessioni allo shutdown
 // TODO: leggere tutto il messaggio che arriva dal client con un buffer e do/while
 
@@ -837,7 +835,6 @@ public class ServerMain extends RemoteObject implements ServerRMI{
             // Rimuovo il riferimento all'utente che ha richiesto la cancellazione,
             // così da non inviare una notifica ridondante
             members.remove(username);
-            System.out.println(project.getMembers().toString());
             // Rimuovo il progetto dalle liste personali di tutti i membri
             // (compreso l'utente che ha richiesto la cancellazione)
             // e notifica tutti i membri del progetto (eccetto <username>)
@@ -853,13 +850,11 @@ public class ServerMain extends RemoteObject implements ServerRMI{
             // Rimuovo il progetto dalla lista globale
             projects.remove(projectName);
             // Rimuovo tutti i riferimenti sul filesystem
-            // https://stackoverflow.com/questions/35988192/java-nio-most-concise-recursive-directory-delete
             try {
                 Path projectPath = Paths.get(pathProjects.toString()+"/"+projectName);
                 Files.walk(projectPath)
                         .sorted(Comparator.reverseOrder())
                         .map(Path::toFile)
-                        //.peek(System.out::println)
                         .forEach(File::delete);
             } catch (IOException e) {
                 // TODO: avviso
@@ -979,7 +974,7 @@ public class ServerMain extends RemoteObject implements ServerRMI{
             // Si mantiene l'utilizzo dei due punti per maggiore leggibilità in fase di debug
             usersStatus.add(user.getStatus().toString()+":"+user.getUsername());
 
-        if(DEBUG) System.out.println(usersStatus.toString());
+        if (DEBUG) System.out.println(usersStatus.toString());
 
         // Per ogni client registrato al servizio di callback,
         // invio la lista di utenti ed il loro stato
