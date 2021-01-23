@@ -609,11 +609,9 @@ public class ServerMain extends RemoteObject implements ServerRMI{
         if(projects.containsKey(projectName)) throw new NameAlreadyInUse(projectName);
 
         // Creo un nuovo progetto e lo aggiungo al database
-        //User user = getUser(username);
-        Project project = new Project(projectName, username, genMulticastIP(),1025+random.nextInt(64510));
+        Project project = new Project(projectName, username,
+                genMulticastIP(),1025+random.nextInt(64510));
         projects.put(projectName, project);
-        //user.addProject(project);
-        // TODO: eliminare se si riesce a togliere la dipendenza da user.projects
 
         // Scrivo su disco tutti i dettagli del progetto
         try {
@@ -623,15 +621,10 @@ public class ServerMain extends RemoteObject implements ServerRMI{
             Files.createFile(projectConfigPath);
             jacksonMapper.writeValue(Files.newBufferedWriter(projectConfigPath),project);
         } catch (IOException e) {
-            // TODO: notificare l'utente dell'errore, probabilmente il nome collide con i criteri del filesystem
-            System.out.println("An error occurred trying to save the project "+projectName+" to the file system!");
-        }
-
-        try {
-            jacksonMapper.writeValue(Files.newBufferedWriter(pathUsers), users);
-        } catch (IOException ioe) {
-            if (DEBUG) ioe.printStackTrace();
-            System.err.println("I was unable to save user information on the filesystem, on next restart they will probably be lost ...");
+            // Avviso l'utente se il salvataggio dei dati non va a buon fine
+            try { clients.get(username).notifyEvent("An error occurred trying to save the project "+projectName+" to the file system! " +
+                    "On next restart it will probably be lost ...");
+            } catch (RemoteException re) {re.printStackTrace(); }
         }
 
         // Ritorno le informazioni multicast da passare all'utente
@@ -667,7 +660,12 @@ public class ServerMain extends RemoteObject implements ServerRMI{
             jacksonMapper.writeValue(
                     Files.newBufferedWriter(Paths.get(pathProjects.toString()+"/"+projectName+"/"+projectName+".json")),
                     project);
-        } catch (IOException e) { e.printStackTrace(); }
+        } catch (IOException e) {
+            // Avviso l'utente se il salvataggio dei dati non va a buon fine
+            try { clients.get(username).notifyEvent("An error occurred trying to save the project "+projectName+" to the file system! " +
+                    "On next restart it will probably be lost ...");
+            } catch (RemoteException re) { if (DEBUG) re.printStackTrace(); }
+        }
 
         // Invio un avviso all'utente aggiunto, ma solo se è online, passandogli le informazioni necessarie ad
         // utilizzare la chat ed informandolo su chi lo ha aggiunto al progetto
