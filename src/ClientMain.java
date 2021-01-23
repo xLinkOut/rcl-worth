@@ -12,7 +12,7 @@ import java.nio.channels.SocketChannel;
 import java.rmi.registry.LocateRegistry;
 import java.nio.charset.StandardCharsets;
 import java.rmi.server.UnicastRemoteObject;
-import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.*;
 
 // Eccezioni
 import WorthExceptions.NameAlreadyInUse;
@@ -22,7 +22,7 @@ import WorthExceptions.UsernameAlreadyTakenException;
 // TODO: accorpare operazione per creare nuovo chat listener
 
 // Client WORTH
-@SuppressWarnings({"AccessStaticViaInstance", "DuplicateThrows"})
+@SuppressWarnings({"AccessStaticViaInstance", "DuplicateThrows", "unchecked"})
 public class ClientMain extends RemoteObject implements NotifyEventInterface {
     // * TCP
     private static final int PORT_TCP = 6789;
@@ -39,7 +39,8 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
     private static String username = "Guest";
     private static List<String> usersStatus;
     private static DatagramSocket multicastSocket;
-    private static Map<String, Thread> chatListeners;
+    private static ThreadPoolExecutor listenersPool;
+    private static Map<String, Future<Void>> chatListeners;
     private static Map<String, ChatListener> projectMulticastIP;
     private static Map<String, ConcurrentLinkedQueue<String>> chats;
 
@@ -91,6 +92,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
         this.usersStatus = new LinkedList<>();
         this.chatListeners = new LinkedHashMap<>();
         this.projectMulticastIP = new LinkedHashMap<>();
+        this.listenersPool = (ThreadPoolExecutor) Executors.newCachedThreadPool();
         try {
             this.multicastSocket = new DatagramSocket();
         } catch (SocketException se) {
@@ -437,22 +439,8 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
                 // projectData[1] = multicastIP
                 // projectData[2] = multicastPort
                 String[] projectData = response[i].substring(1,response[i].length()-1).split(",");
-
-                // Creo il "buffer" della chat
-                ConcurrentLinkedQueue<String> messagesQueue = new ConcurrentLinkedQueue<>();
-                // e lo aggiungo alla map <chats>
-                chats.put(projectData[0], messagesQueue);
-                // Creo un nuovo thread chatListener inizializzato con i valori del progetto corrente (ip,port,buffer)
-                ChatListener chatListener = new ChatListener(projectData[1],Integer.parseInt(projectData[2]),messagesQueue);
-                // Creo il thread corrispondente
-                Thread chatListenerThread = new Thread(chatListener);
-                // Lo aggiungo alla lista di threads listener
-                chatListeners.put(projectData[0], chatListenerThread);
-                // Avvio il thread listener
-                chatListenerThread.start();
-                // Salvo inoltre un riferimento all'IP per il progetto projectName per
-                // poter successivamente inviare messaggi sulla chat senza interrogare il server
-                projectMulticastIP.put(projectData[0],chatListener);
+                // Creo il thread listener che rimarrà in ascolto di nuovi messaggi sulla chat
+                createChatListener(projectData);
             }
             // Stampo un messaggio di conferma
             System.out.println(response[1]);
@@ -521,22 +509,8 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
             // projectData[1] = multicastIP
             // projectData[2] = multicastPort
             String[] projectData = response[2].substring(1,response[2].length()-1).split(",");
-            // Creo il "buffer" della chat
-            ConcurrentLinkedQueue<String> messagesQueue = new ConcurrentLinkedQueue<>();
-            // e lo aggiungo alla map <chats>
-            chats.put(projectData[0], messagesQueue);
-            // Creo un nuovo thread chatListener inizializzato con i valori del progetto corrente (ip,port,buffer)
-            ChatListener chatListener = new ChatListener(projectData[1],Integer.parseInt(projectData[2]),messagesQueue);
-            // Creo il thread corrispondente
-            Thread chatListenerThread = new Thread(chatListener);
-            // Lo aggiungo alla lista di threads listener
-            chatListeners.put(projectData[0],chatListenerThread);
-            // Avvio il thread listener
-            chatListenerThread.start();
-            // Salvo inoltre un riferimento all'IP per il progetto projectName per
-            // poter successivamente inviare messaggi sulla chat senza interrogare il server
-            projectMulticastIP.put(projectData[0],chatListener);
-
+            // Creo il thread listener che rimarrà in ascolto di nuovi messaggi sulla chat
+            createChatListener(projectData);
             // Stampo un messaggio di conferma
             System.out.println(response[1]);
         }else {
@@ -763,15 +737,18 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
         sendRequest("cancelProject "+username+" "+projectName);
         String[] response = readResponse();
         if(response[0].equals("ok")){
-            // Fermo il thread che sta in ascolto sulla chat di questo progetto
-            Thread chatListener = chatListeners.get(projectName);
-            chatListener.interrupt();
+            // Interrompo il thread che sta in ascolto sulla chat di questo progetto
+            chatListeners.get(projectName).cancel(true);
+            // Invio un ultimo messaggio per "sbloccare" la receive
+            try { sendChatMsg(projectName, "shutdown");
+            } catch (ProjectNotFoundException e) { e.printStackTrace(); }
+
             // Rimuovo dalle liste locali tutti i riferimenti al progetto appena cancellato
             // La coda in cui sono immagazzinati i messaggi
             chats.remove(projectName);
             // Il task listener che si occupava di accodare i messaggi
             chatListeners.remove(projectName);
-            // Il thread in ascolto sulla chat
+            // Il riferimento al thread in ascolto sulla chat
             projectMulticastIP.remove(projectName);
             // Infine, stampo un messaggio di conferma
             System.out.println(response[1]);
@@ -846,6 +823,27 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
                 now.get(Calendar.HOUR_OF_DAY), now.get(Calendar.MINUTE));
     }
 
+    // Crea threads listener che rimarranno in ascolto sulla chat
+    private void createChatListener(String[] projectData){
+        // projectData[0] = projectName
+        // projectData[1] = multicastIP
+        // projectData[2] = multicastPort
+
+        // Creo il "buffer" della chat
+        ConcurrentLinkedQueue<String> messagesQueue = new ConcurrentLinkedQueue<>();
+        // e lo aggiungo alla map <chats>
+        chats.put(projectData[0], messagesQueue);
+        // Creo un nuovo task chatListener inizializzato con i valori del progetto corrente (ip,port,buffer)
+        ChatListener chatListener = new ChatListener(projectData[1],Integer.parseInt(projectData[2]),messagesQueue);
+        // Salvo un riferimento al task chatListener, da cui poter recuperare successivamente
+        // l'IP per poter successivamente inviare messaggi sulla chat senza interrogare il server
+        projectMulticastIP.put(projectData[0],chatListener);
+        // Faccio eseguire questo task alla ThreadPool
+        Future<Void> chatListenerThread = (Future<Void>) listenersPool.submit(chatListener);
+        // Aggiungo il riferimento al thread alla lista di threads listener
+        chatListeners.put(projectData[0], chatListenerThread);
+    }
+
     // * CALLBACKS
 
     @Override
@@ -868,26 +866,9 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
         // partecipare alla chat di progetto
 
         // Aggiorno le informazioni di multicast del progetto appena creato
-        // response[2] = [projectName,multicastIP,multicastPort]
-        // projectData[0] = projectName
-        // projectData[1] = multicastIP
-        // projectData[2] = multicastPort
         String[] projectData = multicastInfo.substring(1,multicastInfo.length()-1).split(",");
-        // Creo il "buffer" della chat
-        ConcurrentLinkedQueue<String> messagesQueue = new ConcurrentLinkedQueue<>();
-        // e lo aggiungo alla map <chats>
-        chats.put(projectData[0], messagesQueue);
-        // Creo un nuovo thread chatListener inizializzato con i valori del progetto corrente (ip,port,buffer)
-        ChatListener chatListener = new ChatListener(projectData[1],Integer.parseInt(projectData[2]),messagesQueue);
-        // Creo il thread corrispondente
-        Thread chatListenerThread = new Thread(chatListener);
-        // Lo aggiungo alla lista di threads listener
-        chatListeners.put(projectData[0],chatListenerThread);
-        // Avvio il thread listener
-        chatListenerThread.start();
-        // Salvo inoltre un riferimento all'IP per il progetto projectName per
-        // poter successivamente inviare messaggi sulla chat senza interrogare il server
-        projectMulticastIP.put(projectData[0],chatListener);
+        // Creo il thread listener che rimarrà in ascolto di nuovi messaggi sulla chat
+        createChatListener(projectData);
 
         // Notifico l'utente e ripristino la shell
         System.out.println("\nDing! Sei stato aggiunto al progetto "+projectData[0]+ " da "+fromWho);
