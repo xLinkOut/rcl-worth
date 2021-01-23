@@ -28,6 +28,8 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 // Eccezioni
 import WorthExceptions.*;
 
+import javax.swing.plaf.synth.SynthLookAndFeel;
+
 // TODO: liste principali nuovamente final?
 // TODO: mappare gli user con un dizionario?
 // TODO: traduzione di messaggi in inglese
@@ -673,9 +675,10 @@ public class ServerMain extends RemoteObject implements ServerRMI{
         } catch (IOException e) {
             e.printStackTrace();
         }
-        // Invio un avviso all'utente aggiunto, passandogli le informazioni necessarie ad
+        // Invio un avviso all'utente aggiunto, ma solo se è online, passandogli le informazioni necessarie ad
         // utilizzare la chat ed informandolo su chi lo ha aggiunto al progetto
-        clients.get(memberUsername).notifyProject(project.getMulticastInfo(), username);
+        NotifyEventInterface client = clients.get(memberUsername);
+        if(client != null) client.notifyNewProject(project.getMulticastInfo(), username);
     }
 
     // Restituisce la lista dei membri che fanno parte di un progetto
@@ -836,14 +839,24 @@ public class ServerMain extends RemoteObject implements ServerRMI{
             // Salvo l'IP del progetto per essere riutilizzato
             try{ saveReleasedIP(project.getMulticastIP());
             } catch (MulticastException ignored) {}
+
+            // Riporto la lista di membri del progetto (senza farne una copia, tanto il progetto sarà cancellato)
+            List<String> members = project.getMembers();
+            // Rimuovo il riferimento all'utente che ha richiesto la cancellazione,
+            // così da non inviare una notifica ridondante
+            members.remove(username);
+            System.out.println(project.getMembers().toString());
             // Rimuovo il progetto dalle liste personali di tutti i membri
             // (compreso l'utente che ha richiesto la cancellazione)
-            // e notifica subito l'utente dell'evento
-            for(String user : project.getMembers()) {
-                // TODO: non inviare la notifica alla stessa persona che ha cancellato il progetto
-                try { clients.get(user).notifyEvent(
-                        "Ding! "+username+" ha cancellato il progetto "+projectName);
-                } catch (RemoteException re) {re.printStackTrace();}
+            // e notifica tutti i membri del progetto (eccetto <username>)
+            for(String user : members) {
+                try {
+                    clients.get(user).notifyCancelProject(projectName, username);
+                } catch (NullPointerException | RemoteException e){
+                    // Client offline, quindi non presente in <clients>
+                    // Oppure errore di RemoteException
+                    if (DEBUG) e.printStackTrace();
+                }
             }
             // Rimuovo il progetto dalla lista globale
             projects.remove(projectName);
