@@ -506,7 +506,7 @@ public class ServerMain extends RemoteObject implements ServerRMI{
         if(DEBUG) System.out.println("Server@WORTH > register "+username+" "+password);
 
         // Controllo unicità username
-        if(userExists(username)) throw new UsernameAlreadyTakenException("username");
+        if(getUser(username) != null) throw new UsernameAlreadyTakenException("username");
 
         // Aggiungo il nuovo utente al sistema
         users.add(new User(username, password));
@@ -529,12 +529,13 @@ public class ServerMain extends RemoteObject implements ServerRMI{
             throws UserNotFoundException, AuthenticationFailException, AlreadyLoggedException {
         if(DEBUG) System.out.println("Server@WORTH > login "+username+" "+password);
 
-        // Controllo l'esistenza dell'utente
-        if(!userExists(username)) throw new UserNotFoundException(username);
 
         // Recupero le informazioni dell'utente
         User user = getUser(username);
-        
+
+        // Controllo l'esistenza dell'utente
+        if(user == null) throw new UserNotFoundException(username);
+
         // Controllo se la password è corretta
         if(!user.authentication(password)) throw new AuthenticationFailException(password);
 
@@ -569,14 +570,16 @@ public class ServerMain extends RemoteObject implements ServerRMI{
 
         if(DEBUG) System.out.println("Server@WORTH > logout "+username);
 
+        // Recupero le informazioni dell'utente
+        User user = getUser(username);
+
         // Controllo l'esistenza dell'utente
-        if(!userExists(username)) throw new UserNotFoundException(username);
+        if(user == null) throw new UserNotFoundException(username);
 
         // Limito l'overhead non facendo controlli in quanto, se arriva un comando di logout
         // sicuramente l'utente ha fatto un login precedentemente, per come il client è implementato
         // Aggiorno il suo stato su Offline
-        getUser(username).setStatus(User.Status.OFFLINE);
-        //getPublicUser(username).setStatus(User.Status.OFFLINE);
+        user.setStatus(User.Status.OFFLINE);
 
         // Aggiorno tutti gli altri clients con una callback
         // per informarli che l'utente è ora offline
@@ -645,10 +648,9 @@ public class ServerMain extends RemoteObject implements ServerRMI{
         // Controllo se esiste un progetto con il nome indicato
         if(!projects.containsKey(projectName)) throw new ProjectNotFoundException(projectName);
         // Controllo che memberUsername sia effettivamente un utente del sistema
-        if(!userExists(memberUsername)) throw new UserNotFoundException(memberUsername);
+        if(getUser(username) == null) throw new UserNotFoundException(memberUsername);
 
         Project project = projects.get(projectName);
-        //User user = getUser(memberUsername);
 
         // controllo che username sia un membro di projectName
         if(!project.getMembers().contains(username)) throw new ForbiddenException();
@@ -659,22 +661,14 @@ public class ServerMain extends RemoteObject implements ServerRMI{
 
         // Aggiungo memberUsername come nuovo membro del progetto projectName
         project.addMember(memberUsername);
-        //user.addProject(project);
-        // TODO: eliminare se si riesce a togliere la dipendenza da user.projects
-        //try {
-        //    jacksonMapper.writeValue(Files.newBufferedWriter(pathUsers), users);
-        //} catch (IOException ioe) {
-        //    if (DEBUG) ioe.printStackTrace();
-        //    System.err.println("I was unable to save user information on the filesystem, on next restart they will probably be lost ...");
-        //}
+
         // Salvo i dati aggiornati del progetto su disco
         try{
             jacksonMapper.writeValue(
                     Files.newBufferedWriter(Paths.get(pathProjects.toString()+"/"+projectName+"/"+projectName+".json")),
                     project);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        } catch (IOException e) { e.printStackTrace(); }
+
         // Invio un avviso all'utente aggiunto, ma solo se è online, passandogli le informazioni necessarie ad
         // utilizzare la chat ed informandolo su chi lo ha aggiunto al progetto
         NotifyEventInterface client = clients.get(memberUsername);
@@ -906,11 +900,6 @@ public class ServerMain extends RemoteObject implements ServerRMI{
 
         //if(DEBUG) System.out.println("Server@WORTH > "+clientRequest);
         return clientRequest.toString();
-    }
-
-    // Controlla l'esistenza di un utente nel sistema
-    private boolean userExists(String username){
-        return users.stream().anyMatch(user -> user.getUsername().equals(username));
     }
 
     // Ritorna il riferimento ad uno specifico utente
