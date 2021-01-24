@@ -328,6 +328,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
                                 } catch (ArrayIndexOutOfBoundsException | IllegalArgumentException e) {
                                     if (DEBUG) System.out.println(e.getMessage());
                                     System.out.println("Usage: moveCard projectName cardName from to");
+                                    System.out.println("Tips: <from> and <to> parameters can be either the names of the lists (todo, inprogress...) or their number (1 for todo, 2 for inprogress, etc...");
                                 }
                                 break;
 

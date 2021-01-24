@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.ArrayList;
 
 // Jackson
+import WorthExceptions.CardAlreadyExists;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -140,10 +141,12 @@ public class Project {
     }
 
     // Aggiunge una nuova card al progetto, che finisce nella lista TODO di default
-    public Card addCard(String name, String description){
+    public Card addCard(String name, String description) throws CardAlreadyExists {
+        // Controllare che non ci sia già una card con lo stesso nome
+        try { getCard(name); throw new CardAlreadyExists(name);
+        } catch (CardNotFoundException ignored) {}
+        // Creo e aggiungo la nuova card
         Card card = new Card(name, description);
-        // TODO: Lanciare CardAlreadyExists se esiste già una card con lo stesso nome
-        //if(getCard(name, Section.TODO) != null) return null;
         todo.add(card);
         return card;
     }

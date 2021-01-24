@@ -408,8 +408,10 @@ public class ServerMain extends RemoteObject implements ServerRMI{
                                         key.attach("ko:404:Can't found "+cmd[2]+", are you sure that exists? Try createProject to create a project");
                                     } catch (CardNotFoundException cnfe) {
                                         key.attach("ko:404:Can't found "+cmd[3]+", are you sure that exists? Try addCard to create a card");
+                                    } catch (IllegalArgumentException iae){
+                                        key.attach("ko:405:Are you sure that <from> and <to> sections are valid? ("+cmd[4]+"->"+cmd[5]+")");
                                     } catch (IllegalCardMovementException icme) {
-                                        key.attach("ko:406:You can't move a card from "+cmd[4]+" to "+cmd[5]);
+                                        key.attach("ko:406:You can't move a card from " + cmd[4] + " to " + cmd[5]);
                                     }
                                     break;
 
@@ -644,12 +646,7 @@ public class ServerMain extends RemoteObject implements ServerRMI{
             jacksonMapper.writeValue(
                     Files.newBufferedWriter(Paths.get(pathProjects.toString()+"/"+projectName+"/"+projectName+".json")),
                     project);
-        } catch (IOException e) {
-            // Avviso l'utente se il salvataggio dei dati non va a buon fine
-            try { clients.get(username).notifyEvent("An error occurred trying to save the project "+projectName+" to the file system! " +
-                    "On next restart it will probably be lost ...");
-            } catch (RemoteException re) { if (DEBUG) re.printStackTrace(); }
-        }
+        } catch (IOException ioe) { if (DEBUG) ioe.printStackTrace();}
 
         // Invio un avviso all'utente aggiunto, ma solo se è online, passandogli le informazioni necessarie ad
         // utilizzare la chat ed informandolo su chi lo ha aggiunto al progetto
@@ -686,16 +683,13 @@ public class ServerMain extends RemoteObject implements ServerRMI{
 
         // Controllare che l'utente sia un membro del progetto
         if (!project.isMember(username)) throw new ForbiddenException();
-        // Controllare che non ci sia già una card con lo stesso nome
-        try { if (project.getCard(cardName) != null) throw new CardAlreadyExists(cardName);
-        } catch (CardNotFoundException ignored) {}
+
         // Creare la nuova card
         Card card = project.addCard(cardName, cardDescription);
         // Salvo le informazioni su disco
         try {
             jacksonMapper.writeValue(Files.newBufferedWriter(
                     Paths.get(pathProjects.toString() + "/" + projectName + "/" + cardName + ".json")), card);
-        // TODO avviso
         } catch (IOException ioe) { if (DEBUG) ioe.printStackTrace(); }
     }
 
@@ -745,7 +739,8 @@ public class ServerMain extends RemoteObject implements ServerRMI{
 
     // Sposta una card dalla sezione in cui si trova attualmente ad un'altra
     private void moveCard(String username, String projectName, String cardName, String from, String to)
-            throws ProjectNotFoundException, ForbiddenException, CardNotFoundException, IllegalCardMovementException {
+            throws ProjectNotFoundException, ForbiddenException, CardNotFoundException,
+                   IllegalArgumentException, IllegalCardMovementException {
         // Controllare che il progetto esista
         if(!projects.containsKey(projectName)) throw new ProjectNotFoundException(projectName);
         Project project = projects.get(projectName);
@@ -757,9 +752,20 @@ public class ServerMain extends RemoteObject implements ServerRMI{
         if(project.getCard(cardName) == null) throw new CardNotFoundException(cardName);
 
         // Controllo se from e to sono liste valide
-        // TODO: try/catch ? what if different string
-        Project.Section fromSection = Project.Section.valueOf(from.toUpperCase());
-        Project.Section toSection   = Project.Section.valueOf(to.toUpperCase());
+        // (Viene lanciata una IllegalArgumentException altrimenti)
+        Project.Section fromSection;
+        Project.Section toSection;
+        try{
+            // L'utente può utilizzare i nomi delle liste (i.e. inprogress)
+            fromSection = Project.Section.valueOf(from.toUpperCase());
+            toSection   = Project.Section.valueOf(to.toUpperCase());
+        } catch (IllegalArgumentException iae){
+            // Oppure i numeri 1,2,3,4 per riferirsi alle liste (ordinate)
+            try{
+                fromSection = Project.Section.values()[Integer.parseInt(from)-1];
+                toSection   = Project.Section.values()[Integer.parseInt(to)-1];
+            } catch (NumberFormatException e) { throw new IllegalArgumentException(); }
+        }
 
         // Sposto la card (il rispetto dei vincoli è assicurato dal metodo invocato
         Card card = project.moveCard(cardName,fromSection,toSection);
@@ -768,7 +774,6 @@ public class ServerMain extends RemoteObject implements ServerRMI{
         try {
             jacksonMapper.writeValue(Files.newBufferedWriter(
                     Paths.get(pathProjects.toString() + "/" + projectName + "/" + cardName + ".json")), card);
-            // TODO avviso
         } catch (IOException ioe) { if (DEBUG) ioe.printStackTrace(); }
 
         // Invio una notifica sulla chat di progetto
@@ -846,7 +851,6 @@ public class ServerMain extends RemoteObject implements ServerRMI{
                         .sorted(Comparator.reverseOrder())
                         .map(Path::toFile)
                         .forEach(File::delete);
-                // TODO: avviso
             } catch (IOException ioe) { if (DEBUG) ioe.printStackTrace(); }
         }else throw new PendingCardsException();
     }
