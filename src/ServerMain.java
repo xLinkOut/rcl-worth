@@ -644,10 +644,10 @@ public class ServerMain extends RemoteObject implements ServerRMI{
         Project project = projects.get(projectName);
 
         // controllo che username sia un membro di projectName
-        if(!project.getMembers().contains(username)) throw new ForbiddenException();
+        if(!project.isMember(username)) throw new ForbiddenException();
 
         // Controllo che memberUsername non faccia già parte di projectName
-        if(project.getMembers().contains(memberUsername))
+        if(project.isMember(memberUsername))
             throw new AlreadyMemberException(memberUsername);
 
         // Aggiungo memberUsername come nuovo membro del progetto projectName
@@ -682,7 +682,7 @@ public class ServerMain extends RemoteObject implements ServerRMI{
 
         Project project = projects.get(projectName);
         // Se l'utente è un membro del progetto, può consultare la lista membri
-        if(project.getMembers().contains(username))
+        if(project.isMember(username))
             return project.getMembers().toString();
         else throw new ForbiddenException();
     }
@@ -699,7 +699,7 @@ public class ServerMain extends RemoteObject implements ServerRMI{
         Project project = projects.get(projectName);
 
         // Controllare che l'utente sia un membro del progetto
-        if (!project.getMembers().contains(username)) throw new ForbiddenException();
+        if (!project.isMember(username)) throw new ForbiddenException();
         // Controllare che non ci sia già una card con lo stesso nome
         if (project.getCard(cardName) != null) throw new CardAlreadyExists(cardName);
         // Creare la nuova card
@@ -722,7 +722,7 @@ public class ServerMain extends RemoteObject implements ServerRMI{
         Project project = projects.get(projectName);
 
         // Controllare che l'utente sia un membro del progetto
-        if(!project.getMembers().contains(username)) throw new ForbiddenException();
+        if(!project.isMember(username)) throw new ForbiddenException();
 
         Card card = project.getCard(cardName);
         if(card == null) throw new CardNotFoundException(cardName);
@@ -739,7 +739,7 @@ public class ServerMain extends RemoteObject implements ServerRMI{
         Project project = projects.get(projectName);
 
         // Controllare che l'utente sia un membro del progetto
-        if(!project.getMembers().contains(username)) throw new ForbiddenException();
+        if(!project.isMember(username)) throw new ForbiddenException();
 
         // Costruisco una stringa contente i nomi di tutte le card
         // Organizzate come list.toString(), ovvero
@@ -762,7 +762,7 @@ public class ServerMain extends RemoteObject implements ServerRMI{
         Project project = projects.get(projectName);
 
         // Controllare che l'utente sia un membro del progetto
-        if(!project.getMembers().contains(username)) throw new ForbiddenException();
+        if(!project.isMember(username)) throw new ForbiddenException();
 
         // Controllo che esista la card
         if(project.getCard(cardName) == null) throw new CardNotFoundException(cardName);
@@ -805,7 +805,7 @@ public class ServerMain extends RemoteObject implements ServerRMI{
         Project project = projects.get(projectName);
 
         // Controllare che l'utente sia un membro del progetto
-        if(!project.getMembers().contains(username)) throw new ForbiddenException();
+        if(!project.isMember(username)) throw new ForbiddenException();
 
         // Controllo che esista la card
         if(project.getCard(cardName) == null) throw new CardNotFoundException(cardName);
@@ -822,7 +822,7 @@ public class ServerMain extends RemoteObject implements ServerRMI{
         Project project = projects.get(projectName);
 
         // Controllare che l'utente sia un membro del progetto
-        if(!project.getMembers().contains(username)) throw new ForbiddenException();
+        if(!project.isMember(username)) throw new ForbiddenException();
 
         // Controllo che tutte le cards siano nella lista DONE
         if(project.canDelete()){
@@ -932,7 +932,7 @@ public class ServerMain extends RemoteObject implements ServerRMI{
 
     private List<Project> getUserProjects(String username){
         return projects.values().stream()
-                .filter(project -> project.getMembers().contains(username))
+                .filter(project -> project.isMember(username))
                 .collect(Collectors.toList());
     }
 

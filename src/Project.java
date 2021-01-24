@@ -137,8 +137,10 @@ public class Project {
         if(!members.contains(member)) members.add(member);
     }
 
-    // TODO isMember(String username)
-    // (sostituisce getMembers().contains(username)
+    // Verifica se un utente è membro del progetto
+    public boolean isMember(String username){
+        return this.members.contains(username);
+    }
 
     // Aggiunge una nuova card al progetto, che finisce nella lista TODO di default
     public Card addCard(String name, String description){
