@@ -16,8 +16,6 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import WorthExceptions.CardNotFoundException;
 import WorthExceptions.IllegalCardMovementException;
 
-// TODO: cambiare le card con i numeri per le sezioni 1 2 3 4 todo ecc
-
 // Progetto creato sul sistema da un utente
 public class Project {
 

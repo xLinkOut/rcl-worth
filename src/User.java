@@ -92,9 +92,9 @@ public class User {
             // Resetto il digest (operazione consigliata)
             md.reset();
             // Ritorno la password processata
-            throw new NoSuchAlgorithmException();
-            //return byteData;
+            return byteData;
         } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
             // L'operazione può fallire se non viene trovato l'algoritmo richiesto
             System.err.println("SHA-256 algorithm not found!");
             // In questo caso si ritorna la password non processata, in bytes
