@@ -28,8 +28,6 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 // Eccezioni
 import WorthExceptions.*;
 
-import javax.swing.plaf.synth.SynthLookAndFeel;
-
 // TODO: liste principali nuovamente final?
 // TODO: mappare gli user con un dizionario?
 // TODO: traduzione di messaggi in inglese
@@ -701,7 +699,8 @@ public class ServerMain extends RemoteObject implements ServerRMI{
         // Controllare che l'utente sia un membro del progetto
         if (!project.isMember(username)) throw new ForbiddenException();
         // Controllare che non ci sia già una card con lo stesso nome
-        if (project.getCard(cardName) != null) throw new CardAlreadyExists(cardName);
+        try { if (project.getCard(cardName) != null) throw new CardAlreadyExists(cardName);
+        } catch (CardNotFoundException ignored) {}
         // Creare la nuova card
         Card card = project.addCard(cardName, cardDescription);
         // Salvo le informazioni su disco

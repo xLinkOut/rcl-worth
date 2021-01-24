@@ -92,28 +92,25 @@ public class Project {
     public List<String> getMembers(){ return this.members; }
 
     // Cerca una card nel progetto quando non si conosce la lista di appartenenza
-    public Card getCard(String name){
-        // TODO Lanciare CardNotFound se non viene trovata
+    public Card getCard(String name) throws CardNotFoundException {
         for(List<Card> list : lists.values())
             for(Card card : list)
                 if(card.getName().equals(name))
                     return card;
-        return null;
+        throw new CardNotFoundException(name);
     }
 
     // Cerca una card nel progetto in una lista specifica
-    public Card getCard(String name, Section section){
-        // TODO Lanciare CardNotFound se non viene trovata
+    public Card getCard(String name, Section section) throws CardNotFoundException {
         for(Card card : lists.get(section))
             if(card.getName().equals(name))
                 return card;
-        return null;
+        throw new CardNotFoundException(name);
     }
 
-    public String getCardHistory(String name){
-        // TODO Lanciare CardNotFound se la card non esiste
+    public String getCardHistory(String name) throws CardNotFoundException {
+        // Se la card non viene trovata, la getCard lancia una CardNotFoundException
         Card card = getCard(name);
-        if(card == null) throw new NullPointerException(name);
         return card.getHistory();
     }
 
@@ -173,14 +170,14 @@ public class Project {
             throw new IllegalCardMovementException(fromSection.toString(),toSection.toString());
 
         Card card = getCard(name, fromSection);
-        if(card != null){
-            // Tolgo la card dalla lista originaria
-            lists.get(toSection).add(card);
-            // La aggiungo a quella di destinazione
-            lists.get(fromSection).remove(card);
-            // Aggiorno la lista di appartenenza
-            card.setSection(toSection); // setSection aggiorna anche la history
-        }else throw new CardNotFoundException(name);
+        if(card == null) throw new CardNotFoundException(name);
+
+        // Tolgo la card dalla lista originaria
+        lists.get(toSection).add(card);
+        // La aggiungo a quella di destinazione
+        lists.get(fromSection).remove(card);
+        // Aggiorno la lista di appartenenza
+        card.setSection(toSection); // setSection aggiorna anche la history
         return card;
     }
 
