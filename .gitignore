@@ -1,10 +1,10 @@
 # Files
-TODO
 *.jar
 *.json
-WORTH.iml
 .DS_Store
+WORTH.iml
 
 # Directories
 out/
+data/
 .idea/
