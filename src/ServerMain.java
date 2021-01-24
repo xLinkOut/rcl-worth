@@ -28,16 +28,6 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 // Eccezioni
 import WorthExceptions.*;
 
-// TODO: liste principali nuovamente final?
-// TODO: mappare gli user con un dizionario?
-// TODO: traduzione di messaggi in inglese
-// TODO: togliere la sleep
-// TODO: computeIfAbsent
-// TODO: ricontrollare tutte le .printStackTrace()
-// TODO: argomento da relazione: Ignoro tutti i comandi in eccedenza
-// TODO: chiudere tutte le connessioni allo shutdown
-// TODO: leggere tutto il messaggio che arriva dal client con un buffer e do/while
-
 @SuppressWarnings({"AccessStaticViaInstance", "ResultOfMethodCallIgnored"})
 // Server WORTH
 public class ServerMain extends RemoteObject implements ServerRMI{
@@ -57,8 +47,6 @@ public class ServerMain extends RemoteObject implements ServerRMI{
     private static final ObjectMapper jacksonMapper = new ObjectMapper()
             .enable(SerializationFeature.INDENT_OUTPUT); // Attiva il Pretty-Print
     private static Multicast multicast;
-
-    // Restore <final> keyword
     private static List<User> users;
     private static Map<String, NotifyEventInterface> clients;
     private static Map<String, Project> projects;
@@ -72,7 +60,7 @@ public class ServerMain extends RemoteObject implements ServerRMI{
             // Se la directory "data/" non esiste,
             // probabilmente è il primo avvio del sistema
             if(Files.notExists(pathData)){
-                if (DEBUG) System.out.println("System bootstrap: initialization of files and system structures");
+                System.out.println("System bootstrap...");
                 // Costruisco l'albero di directories e creo i files config di default
                 Files.createDirectory(pathData);     // data/
                 Files.createDirectory(pathProjects); // data/Projects/
@@ -117,8 +105,10 @@ public class ServerMain extends RemoteObject implements ServerRMI{
                                     .map(Path::toFile)
                                     .forEach(File::delete);
                                 Files.delete(projectFolder);
-                            } catch (IOException ignored) {
-                                System.err.println("Progetto corrotto cancellare manualmente");
+                            } catch (IOException ioe) {
+                                if (DEBUG) ioe.printStackTrace();
+                                System.err.println("The project "+projectFolder.getFileName().toString()+
+                                        "is corrupt but could not be deleted, please try manually");
                             }
                         }
 
@@ -144,14 +134,14 @@ public class ServerMain extends RemoteObject implements ServerRMI{
                         );
                     }
 
-                    if (DEBUG) System.out.println("Loaded " + this.projects.size() + " projects");
+                    System.out.println("* Loaded " + this.projects.size() + " projects");
 
                 } else {
                     // Altrimenti creo la cartella per contenere i futuri progetti
                     Files.createDirectory(pathProjects);
                     // Ed inizializzo la struttura dati senza caricare nulla
                     this.projects = new ConcurrentHashMap<>();
-                    if (DEBUG) System.out.println("No projects found");
+                    System.out.println("* No projects found");
                 }
 
                 // Se "data/Users.json" esiste e non è vuoto, carico in memoria la lista di utenti registrati
@@ -159,26 +149,25 @@ public class ServerMain extends RemoteObject implements ServerRMI{
                     this.users = jacksonMapper.readValue(
                             Files.newBufferedReader(pathUsers),
                             new TypeReference<>() {});
-                    if (DEBUG) System.out.println("Loaded " + this.users.size() + " users");
+                    System.out.println("* Loaded " + this.users.size() + " users");
 
                 // Altrimenti inizializzo la struttura dati vuota
                 } else {
                     this.users = new ArrayList<>();
-                    if (DEBUG) System.out.println("No users found");
+                    System.out.println("* No users found");
                 }
 
                 // Se il "data/Multicast.json" esiste e non è vuoto, ne carico il contenuto
                 if(Files.exists(pathMulticast) && Files.size(pathMulticast) > 0){
                     this.multicast = jacksonMapper.readValue(Files.newBufferedReader(pathMulticast),Multicast.class);
-                    if (DEBUG) {
-                        System.out.println("Last used multicast IP: "+this.multicast.getLastIP());
-                        System.out.println("There are "+this.multicast.getReleasedIP().size()+" free IP address");
-                    }
+                    System.out.println("* Last used multicast IP: "+this.multicast.getLastIP());
+                    System.out.println("* There are "+this.multicast.getReleasedIP().size()+" free IP address");
                 }else{
                     // Altrimenti ne creo uno di default
                     this.multicast = new Multicast();
                     // E lo salvo su disco
                     jacksonMapper.writeValue(Files.newBufferedWriter(pathMulticast), this.multicast);
+                    System.out.println("* Loaded default multicast config");
                 }
             }
 
@@ -187,7 +176,7 @@ public class ServerMain extends RemoteObject implements ServerRMI{
             this.clients = new LinkedHashMap<>();
 
         } catch (IOException ioe) {
-            System.err.println("An error occurred during system initialization, closing.");
+            System.err.println("An error occurred during system bootstrap, closing.");
             if (DEBUG) ioe.printStackTrace();
             System.exit(-1);
         }
@@ -216,13 +205,14 @@ public class ServerMain extends RemoteObject implements ServerRMI{
             serverSocketChannel.register(selector, SelectionKey.OP_ACCEPT);
             System.out.println("[TCP] Listening on <" + PORT_TCP + ">");
         } catch (IOException ioe) {
-            ioe.printStackTrace();
+            System.err.println("An error occurred during TCP setup, closing.");
+            if (DEBUG) ioe.printStackTrace();
             System.exit(-1);
         }
 
         // Controllo l'effettiva creazione del Selector
         if (selector == null) {
-            System.err.println("Something went wrong while creating the Selector!");
+            System.err.println("Something went wrong while creating the Selector, closing.");
             System.exit(-1);
         }
 
@@ -237,7 +227,8 @@ public class ServerMain extends RemoteObject implements ServerRMI{
             registry.bind(NAME_RMI, stub);
             System.out.println("[RMI] Bound on <" + NAME_RMI + ">");
         } catch (RemoteException | AlreadyBoundException e) {
-            e.printStackTrace();
+            System.err.println("An error occurred during RMI setup, closing.");
+            if (DEBUG) e.printStackTrace();
             System.exit(-2);
         }
 
@@ -245,6 +236,7 @@ public class ServerMain extends RemoteObject implements ServerRMI{
         while (true) {
             try {
                 // Seleziona un insieme di keys che corrispondono a canali pronti ad eseguire operazioni
+                // TODO: rimuovere prima di consegnare
                 Thread.sleep(300); // Limita overhead
                 selector.select();
             } catch (IOException ioe) { if (DEBUG) ioe.printStackTrace(); break;
@@ -268,7 +260,7 @@ public class ServerMain extends RemoteObject implements ServerRMI{
                         ServerSocketChannel socket = (ServerSocketChannel) key.channel();
                         // Accetto la connessione
                         SocketChannel client = socket.accept();
-                        if(DEBUG) System.out.println("<" + client.getRemoteAddress() + ">: TCP Accepted");
+                        if (DEBUG) System.out.println("<" + client.getRemoteAddress() + ">: TCP Accepted");
                         client.configureBlocking(false);
                         // Registro il nuovo client sul Selector
                         client.register(selector, SelectionKey.OP_READ, null);
@@ -475,7 +467,7 @@ public class ServerMain extends RemoteObject implements ServerRMI{
 
                         if (msg == null) {
                             // Client disconnesso
-                            System.out.println(client.getRemoteAddress() + ": TCP Close");
+                            if (DEBUG) System.out.println(client.getRemoteAddress() + ": TCP Close");
                             key.cancel();
                             key.channel().close();
                         } else {
@@ -485,7 +477,7 @@ public class ServerMain extends RemoteObject implements ServerRMI{
                             key.interestOps(SelectionKey.OP_READ);
                         }
                     }
-                } catch (IOException ioe) { ioe.printStackTrace(); }
+                } catch (IOException ioe) { if (DEBUG) ioe.printStackTrace(); }
             }
         }
     }
@@ -517,14 +509,14 @@ public class ServerMain extends RemoteObject implements ServerRMI{
         // Aggiorno tutti gli altri clients con una callback
         // per informarli che un nuovo si è registrato, e risulta quindi offline
         try { sendCallback(); }
-        catch (RemoteException re) { re.printStackTrace(); }
+        catch (RemoteException re) { if (DEBUG) re.printStackTrace(); }
     }
 
     // Permette ad un utente di utilizzare il sistema, segnando il suo stato come ONLINE
     private String login(String username, String password)
             throws UserNotFoundException, AuthenticationFailException, AlreadyLoggedException {
-        if(DEBUG) System.out.println("Server@WORTH > login "+username+" "+password);
 
+        if(DEBUG) System.out.println("Server@WORTH > login "+username+" "+password);
 
         // Recupero le informazioni dell'utente
         User user = getUser(username);
@@ -546,11 +538,9 @@ public class ServerMain extends RemoteObject implements ServerRMI{
         // Aggiorno tutti gli altri clients con una callback
         // per informarli che l'utente è online
         try { sendCallback(); }
-        catch (RemoteException re) { re.printStackTrace(); }
+        catch (RemoteException re) { if (DEBUG) re.printStackTrace(); }
 
-        // Ritorno le informazioni Multicast su tutti i
-        // (eventuali) progetti di cui l'utente è membro
-        // TODO: devo aver già caricato i progetti in memoria, ovviamente
+        // Ritorno le informazioni Multicast su tutti i progetti di cui l'utente è membro
         List<Project> userProjects = getUserProjects(username);
         // Se l'utente non è membro di nessun progetto, ritorno una stringa vuota
         if(userProjects.isEmpty()) return "";
@@ -580,12 +570,13 @@ public class ServerMain extends RemoteObject implements ServerRMI{
         // Aggiorno tutti gli altri clients con una callback
         // per informarli che l'utente è ora offline
         try { sendCallback(); }
-        catch (RemoteException re) {re.printStackTrace();}
+        catch (RemoteException re) { if (DEBUG) re.printStackTrace();}
     }
 
     // Restituisce la lista dei progetto di cui l'utente ne è membro
     private String listProjects(String username)
             throws ProjectNotFoundException {
+
         if(DEBUG) System.out.println("Server@WORTH > listProjects "+username);
 
         List<Project> list = getUserProjects(username);
@@ -620,7 +611,7 @@ public class ServerMain extends RemoteObject implements ServerRMI{
             // Avviso l'utente se il salvataggio dei dati non va a buon fine
             try { clients.get(username).notifyEvent("An error occurred trying to save the project "+projectName+" to the file system! " +
                     "On next restart it will probably be lost ...");
-            } catch (RemoteException re) {re.printStackTrace(); }
+            } catch (RemoteException re) { if (DEBUG) re.printStackTrace(); }
         }
 
         // Ritorno le informazioni multicast da passare all'utente
@@ -690,7 +681,7 @@ public class ServerMain extends RemoteObject implements ServerRMI{
             throws ProjectNotFoundException, ForbiddenException, CardAlreadyExists {
 
         if (DEBUG)
-            System.out.println("Server@WORTH > addCard " + username + " " + projectName + " " + cardName + " " + cardDescription);
+            System.out.println("Server@WORTH > addCard "+username+" "+projectName+" "+cardName+" "+cardDescription);
 
         // Controllare che il progetto esista
         if (!projects.containsKey(projectName)) throw new ProjectNotFoundException(projectName);
@@ -708,12 +699,13 @@ public class ServerMain extends RemoteObject implements ServerRMI{
             jacksonMapper.writeValue(Files.newBufferedWriter(
                     Paths.get(pathProjects.toString() + "/" + projectName + "/" + cardName + ".json")), card);
         // TODO avviso
-        } catch (IOException e) { e.printStackTrace(); }
+        } catch (IOException ioe) { if (DEBUG) ioe.printStackTrace(); }
     }
 
     // Restituisce le informazioni su una card di un progetto
     private String showCard(String username, String projectName, String cardName)
             throws CardNotFoundException, ForbiddenException, ProjectNotFoundException {
+
         if(DEBUG) System.out.println("Server@WORTH > showCard "+username+" "+projectName+" "+cardName);
 
         // Controllare che il progetto esista
@@ -731,6 +723,7 @@ public class ServerMain extends RemoteObject implements ServerRMI{
     // Ritorna la lista delle cards presenti in un progetto
     private String showCards(String username, String projectName)
             throws ProjectNotFoundException, ForbiddenException {
+
         if(DEBUG) System.out.println("Server@WORTH > showCards "+username+" "+projectName);
 
         // Controllare che il progetto esista
@@ -779,7 +772,7 @@ public class ServerMain extends RemoteObject implements ServerRMI{
             jacksonMapper.writeValue(Files.newBufferedWriter(
                     Paths.get(pathProjects.toString() + "/" + projectName + "/" + cardName + ".json")), card);
             // TODO avviso
-        } catch (IOException e) { e.printStackTrace(); }
+        } catch (IOException ioe) { if (DEBUG) ioe.printStackTrace(); }
 
         // Invio una notifica sulla chat di progetto
         String message = getTime()+" WORTH: "+username+" has moved card "+cardName+
@@ -789,9 +782,10 @@ public class ServerMain extends RemoteObject implements ServerRMI{
                     message.getBytes(StandardCharsets.UTF_8), message.length(),
                     InetAddress.getByName(project.getMulticastIP()), project.getMulticastPort()));
         } catch (UnknownHostException uhe) {
-            System.out.println("I'm not sure if I have the correct address for the project "+projectName+", I can't notify all other members for now, sorry.");
+            if (DEBUG) System.err.println("I'm not sure if I have the correct address for the project "+projectName+
+                    ", I can't notify all other members for now, sorry.");
         } catch (IOException ioe) {
-            System.out.println("There was an error trying to notify all other members.");
+            if (DEBUG) System.err.println("There was an error trying to notify all other members.");
         }
 
     }
@@ -855,10 +849,8 @@ public class ServerMain extends RemoteObject implements ServerRMI{
                         .sorted(Comparator.reverseOrder())
                         .map(Path::toFile)
                         .forEach(File::delete);
-            } catch (IOException e) {
                 // TODO: avviso
-                e.printStackTrace();
-            }
+            } catch (IOException ioe) { if (DEBUG) ioe.printStackTrace(); }
         }else throw new PendingCardsException();
     }
 
@@ -890,7 +882,6 @@ public class ServerMain extends RemoteObject implements ServerRMI{
             // Finché ci sono bytes da leggere, continuo
         } while (bytesRead >= 1024);
 
-        //if(DEBUG) System.out.println("Server@WORTH > "+clientRequest);
         return clientRequest.toString();
     }
 
@@ -914,9 +905,8 @@ public class ServerMain extends RemoteObject implements ServerRMI{
         String multicastIP = multicast.getNewIP();
         // Salvo tutto su file, prima di ritornare l'IP
         try { jacksonMapper.writeValue(Files.newBufferedWriter(pathMulticast),multicast);
-        } catch (IOException e) { System.err.println("I was unable to save multicast information on the filesystem, on next restart they will probably be lost ..."); }
+        } catch (IOException ioe) { System.err.println("I was unable to save multicast information on the filesystem, on next restart they will probably be lost ..."); }
 
-        if(DEBUG) System.out.println(multicastIP);
         return multicastIP;
     }
 
@@ -926,7 +916,7 @@ public class ServerMain extends RemoteObject implements ServerRMI{
         multicast.addReleasedIP(IP);
         // Salvo tutto su file
         try { jacksonMapper.writeValue(Files.newBufferedWriter(pathMulticast),multicast);
-        } catch (IOException e) { System.err.println("I was unable to save multicast information on the filesystem, on next restart they will probably be lost ..."); }
+        } catch (IOException ioe) { System.err.println("I was unable to save multicast information on the filesystem, on next restart they will probably be lost ..."); }
     }
 
     private List<Project> getUserProjects(String username){
@@ -941,8 +931,11 @@ public class ServerMain extends RemoteObject implements ServerRMI{
     // Iscrive il client alla ricezione di eventi tramite callback
     public synchronized void registerCallback(String username, NotifyEventInterface clientInterface)
             throws RemoteException {
-        if(!clients.containsKey(username)) {
-            clients.put(username,clientInterface);
+        // map.putIfAbsent ritorna null se la chiave non è mappata a nessun valore,
+        // e viene quindi effettivamente processata la put, altrimenti ritorna
+        // il valore associato alla chiave utilizzata
+        // Procedo solo se l'inserimento nella map del client va a buon fine, i.e. non è già registrato
+        if(clients.putIfAbsent(username, clientInterface) == null){
             // Lista di stringhe che riporta lo stato di ogni utente del sistema
             List<String> usersStatus = new LinkedList<>();
             for(User user : users)
@@ -984,7 +977,7 @@ public class ServerMain extends RemoteObject implements ServerRMI{
     // Se si verifica una disconnessione forzata di un client
     // "sondo" la rete per impostare lo stato del relativo utente su OFFLINE
     // Quindi invio le callback per aggiornare i clients sullo stato degli utenti
-    private void pingPong() {
+    private synchronized void pingPong() {
         for(Map.Entry<String, NotifyEventInterface> client : clients.entrySet()) {
             try {
                 client.getValue().notifyEvent("");

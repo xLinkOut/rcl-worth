@@ -19,8 +19,6 @@ import WorthExceptions.NameAlreadyInUse;
 import WorthExceptions.ProjectNotFoundException;
 import WorthExceptions.UsernameAlreadyTakenException;
 
-// TODO: accorpare operazione per creare nuovo chat listener
-
 // Client WORTH
 @SuppressWarnings({"AccessStaticViaInstance", "DuplicateThrows", "unchecked"})
 public class ClientMain extends RemoteObject implements NotifyEventInterface {
@@ -279,11 +277,11 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
                                 try {
                                     // cmd[1] = projectName, nome del progetto
                                     // cmd[2] = cardName, nome della card
-                                    // cmd[3] = cardDescription, descrizione testuale della card
+                                    // cmd[3] ... cmd[n] = cardDescription, descrizione testuale della card
+                                    // (viene "ricostruita" in una stringa essendo cmd un array)
                                     if (cmd[1].contains(":"))
                                         throw new IllegalArgumentException("Colon character (:) not allowed in username\n");
-                                    // TODO: Unire la caption su cmd[3]
-                                    addCard(cmd[1], cmd[2], cmd[3]);
+                                    addCard(cmd[1], cmd[2], String.join(" ",Arrays.copyOfRange(cmd,2,cmd.length)));
                                 }catch (ArrayIndexOutOfBoundsException | IllegalArgumentException e){
                                     if (DEBUG) System.out.println(e.getMessage());
                                     else if (e.getMessage().contains("Colon")) System.out.println(e.getMessage());
