@@ -493,8 +493,9 @@ public class ServerMain extends RemoteObject implements ServerRMI{
         if(password.isEmpty()) throw new IllegalArgumentException("password");
         if(DEBUG) System.out.println("Server@WORTH > register "+username+" "+password);
 
-        // Controllo unicità username
-        if(getUser(username) != null) throw new UsernameAlreadyTakenException("username");
+        // Controllo unicità username (getUser lancia UserNotFound se non trova l'utente)
+        try{ getUser(username); throw new UsernameAlreadyTakenException("username");
+        } catch (UserNotFoundException ignored) {}
 
         // Aggiungo il nuovo utente al sistema
         users.add(new User(username, password));
@@ -518,11 +519,8 @@ public class ServerMain extends RemoteObject implements ServerRMI{
 
         if(DEBUG) System.out.println("Server@WORTH > login "+username+" "+password);
 
-        // Recupero le informazioni dell'utente
+        // Recupero le informazioni dell'utente e ne controllo l'esistenza
         User user = getUser(username);
-
-        // Controllo l'esistenza dell'utente
-        if(user == null) throw new UserNotFoundException(username);
 
         // Controllo se la password è corretta
         if(!user.authentication(password)) throw new AuthenticationFailException(password);
@@ -556,11 +554,8 @@ public class ServerMain extends RemoteObject implements ServerRMI{
 
         if(DEBUG) System.out.println("Server@WORTH > logout "+username);
 
-        // Recupero le informazioni dell'utente
+        // Recupero le informazioni dell'utente e ne controllo l'esistenza
         User user = getUser(username);
-
-        // Controllo l'esistenza dell'utente
-        if(user == null) throw new UserNotFoundException(username);
 
         // Limito l'overhead non facendo controlli in quanto, se arriva un comando di logout
         // sicuramente l'utente ha fatto un login precedentemente, per come il client è implementato
@@ -627,10 +622,12 @@ public class ServerMain extends RemoteObject implements ServerRMI{
 
         // Controllo se esiste un progetto con il nome indicato
         if(!projects.containsKey(projectName)) throw new ProjectNotFoundException(projectName);
-        // Controllo che memberUsername sia effettivamente un utente del sistema
-        if(getUser(username) == null) throw new UserNotFoundException(memberUsername);
 
         Project project = projects.get(projectName);
+
+        // Controllo che memberUsername sia effettivamente un utente del sistema
+        // (getUser lancia UserNotFound se non trova l'utente)
+        getUser(memberUsername);
 
         // controllo che username sia un membro di projectName
         if(!project.isMember(username)) throw new ForbiddenException();
@@ -886,10 +883,11 @@ public class ServerMain extends RemoteObject implements ServerRMI{
     }
 
     // Ritorna il riferimento ad uno specifico utente
-    private User getUser(String username){
+    private User getUser(String username) throws UserNotFoundException {
         for(User user: users)
-            if(user.getUsername().equals(username)) return user;
-        return null;
+            if(user.getUsername().equals(username))
+                return user;
+        throw new UserNotFoundException(username);
     }
 
     // Restituisce l'ora corrente in formato (HH:MM)
@@ -983,7 +981,8 @@ public class ServerMain extends RemoteObject implements ServerRMI{
                 client.getValue().notifyEvent("");
             } catch (RemoteException re) {
                 // Imposto lo stato dell'utente su OFFLINE
-                Objects.requireNonNull(getUser(client.getKey())).setStatus(User.Status.OFFLINE);
+                try { getUser(client.getKey()).setStatus(User.Status.OFFLINE);
+                } catch (UserNotFoundException ignored) {}
                 // Rimuovo l'interfaccia per le callback
                 clients.remove(client.getKey(), client.getValue());
                 // Ho trovato il client disconnesso, mi fermo
