@@ -1,6 +1,8 @@
 // @author Luca Cirillo (545480)
 
+import java.util.Map;
 import java.util.List;
+import java.util.HashMap;
 import java.util.ArrayList;
 
 // Jackson
@@ -12,6 +14,8 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 // Eccezioni di WORTH
 import WorthExceptions.CardNotFoundException;
 import WorthExceptions.IllegalCardMovementException;
+
+// TODO: cambiare le card con i numeri per le sezioni 1 2 3 4 todo ecc
 
 // Progetto creato sul sistema da un utente
 public class Project {
@@ -26,9 +30,10 @@ public class Project {
     private final List<Card> inProgress;  // Cards nella lista INPROGRESS
     private final List<Card> toBeRevised; // Cards nella lista TOBEREVISED
     private final List<Card> done;        // Cards nella lista DONE
-
     private final String multicastIP;     // Indirizzo IP multicast della chat di progetto
     private final int multicastPort;      // Porta della chat di progetto
+    @JsonIgnore
+    private final Map<Section, List<Card>> lists; // Dizionario per recuperare facilmente la lista desiderata
 
     @JsonCreator // Costruttore di Jackson
     public Project(
@@ -40,14 +45,24 @@ public class Project {
 
         this.name = name;
         this.members = members;
+
         this.multicastIP = multicastIP;
         this.multicastPort = multicastPort;
+
         this.todo = new ArrayList<>();
         this.inProgress = new ArrayList<>();
         this.toBeRevised = new ArrayList<>();
         this.done = new ArrayList<>();
+
+        // Inizializzo la map per le liste
+        this.lists = new HashMap<>();
+        lists.put(Section.TODO, this.todo);
+        lists.put(Section.INPROGRESS, this.inProgress);
+        lists.put(Section.TOBEREVISED, this.toBeRevised);
+        lists.put(Section.DONE, this.done);
+
         // Smistamento delle cards nelle rispettive liste all'avvio del server
-        for(Card card : cards) getList(card.getSection()).add(card);
+        for(Card card : cards) lists.get(card.getSection()).add(card);
     }
 
     public Project(String name, String owner, String multicastIP, int multicastPort){
@@ -59,6 +74,13 @@ public class Project {
         this.toBeRevised = new ArrayList<>();
         this.inProgress = new ArrayList<>();
         this.done = new ArrayList<>();
+
+        // Inizializzo la map per le liste
+        this.lists = new HashMap<>();
+        lists.put(Section.TODO, this.todo);
+        lists.put(Section.INPROGRESS, this.inProgress);
+        lists.put(Section.TOBEREVISED, this.toBeRevised);
+        lists.put(Section.DONE, this.done);
 
         this.multicastIP = multicastIP;
         this.multicastPort = multicastPort;
@@ -72,26 +94,19 @@ public class Project {
     // Cerca una card nel progetto quando non si conosce la lista di appartenenza
     public Card getCard(String name){
         // TODO Lanciare CardNotFound se non viene trovata
-        for(Card card : todo)
-            if(card.getName().equals(name)) return card;
-
-        for(Card card: inProgress)
-            if(card.getName().equals(name)) return card;
-
-        for(Card card: toBeRevised)
-            if(card.getName().equals(name)) return card;
-
-        for(Card card: done)
-            if(card.getName().equals(name)) return card;
-
+        for(List<Card> list : lists.values())
+            for(Card card : list)
+                if(card.getName().equals(name))
+                    return card;
         return null;
     }
 
     // Cerca una card nel progetto in una lista specifica
     public Card getCard(String name, Section section){
         // TODO Lanciare CardNotFound se non viene trovata
-        for(Card card : getList(section))
-            if(card.getName().equals(name)) return card;
+        for(Card card : lists.get(section))
+            if(card.getName().equals(name))
+                return card;
         return null;
     }
 
@@ -112,15 +127,9 @@ public class Project {
         return "["+this.name+","+this.multicastIP+","+this.multicastPort+"]";
     }
 
+    @JsonIgnore // E' una scorciatoia per altri metodi, non deve persistere sul sistema
     public List<Card> getList(Section section){
-        // TODO Cambiare con un'implementazione più efficiente
-        switch (section){
-            case TODO: return todo;
-            case INPROGRESS: return inProgress;
-            case TOBEREVISED: return toBeRevised;
-            case DONE: return done;
-            default: return null;
-        }
+        return lists.get(section);
     }
 
     // Aggiunge un nuovo utente come membro del progetto
@@ -164,9 +173,9 @@ public class Project {
         Card card = getCard(name, fromSection);
         if(card != null){
             // Tolgo la card dalla lista originaria
-            getList(toSection).add(card);
+            lists.get(toSection).add(card);
             // La aggiungo a quella di destinazione
-            getList(fromSection).remove(card);
+            lists.get(fromSection).remove(card);
             // Aggiorno la lista di appartenenza
             card.setSection(toSection); // setSection aggiorna anche la history
         }else throw new CardNotFoundException(name);
