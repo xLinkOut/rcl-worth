@@ -548,7 +548,7 @@ public class ServerMain extends RemoteObject implements ServerRMI{
         // Se l'utente non è membro di nessun progetto, ritorno una stringa vuota
         if(userProjects.isEmpty()) return "";
         StringBuilder output = new StringBuilder();
-        for(Project project : userProjects) output.append(project.getMulticastInfo());
+        for(Project project : userProjects) output.append(project.getMulticastInfo()).append(":");
         return output.toString();
 
     }
