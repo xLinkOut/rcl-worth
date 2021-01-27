@@ -42,7 +42,7 @@ public class ServerMain extends RemoteObject implements ServerRMI{
     private static final Path pathProjects = Paths.get("data/Projects/");
     private static final Path pathMulticast = Paths.get("data/Multicast.json");
     // * SERVER
-    private static final boolean DEBUG = true;
+    private final boolean DEBUG;
     private static final Random random = new Random();
     private static final ObjectMapper jacksonMapper = new ObjectMapper()
             .enable(SerializationFeature.INDENT_OUTPUT); // Attiva il Pretty-Print
@@ -52,8 +52,11 @@ public class ServerMain extends RemoteObject implements ServerRMI{
     private static Map<String, Project> projects;
 
     // Inizializza il sistema oppure ripristina l'ultima sessione
-    public ServerMain(){
+    public ServerMain(boolean debug){
         super(); // Callback
+
+        // Imposto il livello di debug desiderato
+        this.DEBUG = debug;
 
         // Persistenza
         try{
@@ -148,7 +151,7 @@ public class ServerMain extends RemoteObject implements ServerRMI{
                 if (Files.exists(pathUsers) && Files.size(pathUsers) > 0) {
                     this.users = jacksonMapper.readValue(
                             Files.newBufferedReader(pathUsers),
-                            new TypeReference<>() {});
+                            new TypeReference<List<User>>() {});
                     System.out.println("* Loaded " + this.users.size() + " users");
 
                 // Altrimenti inizializzo la struttura dati vuota
@@ -887,7 +890,7 @@ public class ServerMain extends RemoteObject implements ServerRMI{
     }
 
     // Ritorna il riferimento ad uno specifico utente
-    private User getUser(String username) throws UserNotFoundException {
+    private synchronized User getUser(String username) throws UserNotFoundException {
         for(User user: users)
             if(user.getUsername().equals(username))
                 return user;
@@ -1001,7 +1004,7 @@ public class ServerMain extends RemoteObject implements ServerRMI{
 
     // * MAIN
     public static void main(String[] args){
-        ServerMain server = new ServerMain();
+        ServerMain server = new ServerMain(args.length > 0 && args[0].equalsIgnoreCase("DEBUG"));
         server.live();
     }
 }
