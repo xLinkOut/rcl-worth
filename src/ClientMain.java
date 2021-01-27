@@ -197,6 +197,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
 
                                 case "quit":
                                     socketChannel.close();
+                                    listenersPool.shutdownNow();
                                     System.out.println("Hope to see you soon!");
                                     System.exit(0);
                                     break;
@@ -390,6 +391,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
                                     logout();
                                 }
                                 socketChannel.close();
+                                listenersPool.shutdownNow();
                                 System.exit(0);
                                 break;
 
