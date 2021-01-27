@@ -32,7 +32,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
     private static ServerRMI server = null;
     private static NotifyEventInterface notifyStub;
     // * CLIENT
-    private static final boolean DEBUG = true;
+    private final boolean DEBUG;
     private static boolean logged = false;
     private static String username = "Guest";
     private static List<String> usersStatus;
@@ -44,46 +44,46 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
 
     // * MESSAGES
     private static final String msgStartup =
-        """
-        
-        ██╗    ██╗ ██████╗ ██████╗ ████████╗██╗  ██╗
-        ██║    ██║██╔═══██╗██╔══██╗╚══██╔══╝██║  ██║
-        ██║ █╗ ██║██║   ██║██████╔╝   ██║   ███████║
-        ██║███╗██║██║   ██║██╔══██╗   ██║   ██╔══██║
-        ╚███╔███╔╝╚██████╔╝██║  ██║   ██║   ██║  ██║
-         ╚══╝╚══╝  ╚═════╝ ╚═╝  ╚═╝   ╚═╝   ╚═╝  ╚═╝
-                                                   \s""";
+        // Le multi-line strings (o text-block) non sono disponibili in Java 8
+        "\n"+
+        "██╗    ██╗ ██████╗ ██████╗ ████████╗██╗  ██╗\n"+
+        "██║    ██║██╔═══██╗██╔══██╗╚══██╔══╝██║  ██║\n"+
+        "██║ █╗ ██║██║   ██║██████╔╝   ██║   ███████║\n"+
+        "██║███╗██║██║   ██║██╔══██╗   ██║   ██╔══██║\n"+
+        "╚███╔███╔╝╚██████╔╝██║  ██║   ██║   ██║  ██║\n"+
+         "╚══╝╚══╝  ╚═════╝ ╚═╝  ╚═╝   ╚═╝   ╚═╝  ╚═╝\n";
+
     private static final String msgHelpGuest =
-        """
-        You need to login to WORTH in order to use it. Here some commands:
-        \tregister <username> <password> | Create a new WORTH account;
-        \tlogin    <username> <password> | Login to WORTH using your credentials;
-        \thelp                           | Show this help;
-        \tquit                           | Close WORTH.
-        """;
+        "You need to login to WORTH in order to use it. Here some commands:\n"+
+        "\tregister <username> <password> | Create a new WORTH account;\n"+
+        "\tlogin    <username> <password> | Login to WORTH using your credentials;\n"+
+        "\thelp                           | Show this help;\n"+
+        "\tquit                           | Close WORTH.\n";
+
     private static final String msgHelp =
-        """
-        \tcreateProject <projectName>                   | Create a new project;
-        \taddMember <projectName> <memberUsername>      | Add a new member in a project;
-        \tshowMembers <projectName>                     | Shows the current members of a project;
-        \taddCard <projectName> <cardName> <cardDesc>   | Create and assign a new card to a project;
-        \tshowCard <projectName> <cardName>             | Shows information about a card assigned to a project;
-        \tshowCards <projectName> [table]               | Shows all cards assigned to a project;
-        \tmoveCard <projectName> <cardName> <from> <to> | Move a card from a list to another;
-        \tgetCardHistory <projectName> <cardName>       | Shows the history of a card;
-        \treadChat <projectName>                        | Read message sent in the project chat;
-        \tsendChatMsg <projectName> <message>           | Send a message in the project chat;
-        \tcancelProject <projectName>                   | Cancel a project (Warning, it's not reversible);
-        \tlistUsers                                     | List all WORTH users and their status;
-        \tlistOnlineUsers                               | List only users that are currently online;
-        \tlogout                                        | Logout from your WORTH account;
-        \thelp                                          | Show this help;
-        \tquit                                          | Logout and close WORTH.
-        """;
+        "\tcreateProject <projectName>                   | Create a new project;\n"+
+        "\taddMember <projectName> <memberUsername>      | Add a new member in a project;\n"+
+        "\tshowMembers <projectName>                     | Shows the current members of a project;\n"+
+        "\taddCard <projectName> <cardName> <cardDesc>   | Create and assign a new card to a project;\n"+
+        "\tshowCard <projectName> <cardName>             | Shows information about a card assigned to a project;\n"+
+        "\tshowCards <projectName> [table]               | Shows all cards assigned to a project;\n"+
+        "\tmoveCard <projectName> <cardName> <from> <to> | Move a card from a list to another;\n"+
+        "\tgetCardHistory <projectName> <cardName>       | Shows the history of a card;\n"+
+        "\treadChat <projectName>                        | Read message sent in the project chat;\n"+
+        "\tsendChatMsg <projectName> <message>           | Send a message in the project chat;\n"+
+        "\tcancelProject <projectName>                   | Cancel a project (Warning, it's not reversible);\n"+
+        "\tlistUsers                                     | List all WORTH users and their status;\n"+
+        "\tlistOnlineUsers                               | List only users that are currently online;\n"+
+        "\tlogout                                        | Logout from your WORTH account;\n"+
+        "\thelp                                          | Show this help;\n"+
+        "\tquit                                          | Logout and close WORTH.\n";
 
     // Inizializza il client WORTH
-    public ClientMain(){
+    public ClientMain(boolean debug){
         super(); // Callback
+
+        // Modalità debug ON/OFF
+        this.DEBUG = debug;
 
         // Chats
         this.chats = new HashMap<>();
@@ -426,7 +426,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
         if(response[0].equals("ok")){
             // Registro l'esito positivo del login
             logged = true;
-            ClientMain.username = username;
+            this.username = username;
             // Registro il client per la ricezione delle callback
             server.registerCallback(username, notifyStub);
 
@@ -913,7 +913,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
 
     // * MAIN
     public static void main(String[] args){
-        ClientMain client = new ClientMain();
+        ClientMain client = new ClientMain(args.length > 0 && args[0].equalsIgnoreCase("DEBUG"));
         client.run();
     }
 
