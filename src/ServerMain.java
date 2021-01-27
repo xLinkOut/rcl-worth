@@ -51,12 +51,26 @@ public class ServerMain extends RemoteObject implements ServerRMI{
     private static Map<String, NotifyEventInterface> clients;
     private static Map<String, Project> projects;
 
+    private static final String msgStartup =
+            // Le multi-line strings (o text-block) non sono disponibili in Java 8
+            "\n"+
+            "██╗    ██╗ ██████╗ ██████╗ ████████╗██╗  ██╗\n"+
+            "██║    ██║██╔═══██╗██╔══██╗╚══██╔══╝██║  ██║\n"+
+            "██║ █╗ ██║██║   ██║██████╔╝   ██║   ███████║\n"+
+            "██║███╗██║██║   ██║██╔══██╗   ██║   ██╔══██║\n"+
+            "╚███╔███╔╝╚██████╔╝██║  ██║   ██║   ██║  ██║\n"+
+            "╚══╝╚══╝  ╚═════╝ ╚═╝  ╚═╝   ╚═╝   ╚═╝  ╚═╝\n"+
+            "                                   * Server";
+
     // Inizializza il sistema oppure ripristina l'ultima sessione
     public ServerMain(boolean debug){
         super(); // Callback
 
         // Imposto il livello di debug desiderato
         this.DEBUG = debug;
+
+        // Messaggio di avvio
+        System.out.println(msgStartup);
 
         // Persistenza
         try{
@@ -164,7 +178,7 @@ public class ServerMain extends RemoteObject implements ServerRMI{
                 if(Files.exists(pathMulticast) && Files.size(pathMulticast) > 0){
                     this.multicast = jacksonMapper.readValue(Files.newBufferedReader(pathMulticast),Multicast.class);
                     System.out.println("* Last used multicast IP: "+this.multicast.getLastIP());
-                    System.out.println("* There are "+this.multicast.getReleasedIP().size()+" free IP address");
+                    System.out.println("* There are "+this.multicast.getReleasedIP().size()+" free IP addresses");
                 }else{
                     // Altrimenti ne creo uno di default
                     this.multicast = new Multicast();
@@ -187,6 +201,8 @@ public class ServerMain extends RemoteObject implements ServerRMI{
 
     // Server go live!
     private void live() {
+
+
         // Variabili da utilizzare nel try/catch
         Selector selector = null;
         ServerSocket serverSocket;
