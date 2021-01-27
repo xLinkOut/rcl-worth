@@ -94,7 +94,6 @@ public class User {
             // Ritorno la password processata
             return byteData;
         } catch (NoSuchAlgorithmException e) {
-            e.printStackTrace();
             // L'operazione può fallire se non viene trovato l'algoritmo richiesto
             System.err.println("SHA-256 algorithm not found!");
             // In questo caso si ritorna la password non processata, in bytes

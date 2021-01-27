@@ -39,7 +39,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
     private static DatagramSocket multicastSocket;
     private static ThreadPoolExecutor listenersPool;
     private static Map<String, Future<Void>> chatListeners;
-    private static Map<String, ChatListener> projectMulticastIP;
+    private static Map<String, ChatListener> projectsMulticast;
     private static Map<String, ConcurrentLinkedQueue<String>> chats;
 
     // * MESSAGES
@@ -89,7 +89,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
         this.chats = new HashMap<>();
         this.usersStatus = new LinkedList<>();
         this.chatListeners = new LinkedHashMap<>();
-        this.projectMulticastIP = new LinkedHashMap<>();
+        this.projectsMulticast = new LinkedHashMap<>();
         this.listenersPool = (ThreadPoolExecutor) Executors.newCachedThreadPool();
         try {
             this.multicastSocket = new DatagramSocket();
@@ -465,6 +465,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
             username = "Guest";
             // Disiscrivo il client dalla ricezione delle callbacks
             server.unregisterCallback(username, notifyStub);
+
             System.out.println(response[1]);
         }else {
             if (DEBUG) System.out.print("["+response[1]+"] ");
@@ -722,7 +723,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
 
         // (HH:MM) username: message
         String formattedMessage = getTime()+" "+username+": "+message;
-        ChatListener multicastInfo = projectMulticastIP.get(projectName);
+        ChatListener multicastInfo = projectsMulticast.get(projectName);
         multicastSocket.send(new DatagramPacket(
                 formattedMessage.getBytes(StandardCharsets.UTF_8), formattedMessage.length(),
                 InetAddress.getByName(multicastInfo.getMulticastIP()), multicastInfo.getMulticastPort()));
@@ -741,7 +742,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
             // Interrompo il thread che sta in ascolto sulla chat di questo progetto
             chatListeners.get(projectName).cancel(true);
             // Invio un ultimo messaggio per "sbloccare" la receive
-            ChatListener multicastInfo = projectMulticastIP.get(projectName);
+            ChatListener multicastInfo = projectsMulticast.get(projectName);
             multicastSocket.send(new DatagramPacket(
                     "shutdown".getBytes(StandardCharsets.UTF_8), "shutdown".length(),
                     InetAddress.getByName(multicastInfo.getMulticastIP()), multicastInfo.getMulticastPort()));
@@ -751,7 +752,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
             // Il task listener che si occupava di accodare i messaggi
             chatListeners.remove(projectName);
             // Il riferimento al thread in ascolto sulla chat
-            projectMulticastIP.remove(projectName);
+            projectsMulticast.remove(projectName);
             // Infine, stampo un messaggio di conferma
             System.out.println(response[1]);
 
@@ -839,7 +840,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
         ChatListener chatListener = new ChatListener(projectData[1],Integer.parseInt(projectData[2]),messagesQueue);
         // Salvo un riferimento al task chatListener, da cui poter recuperare successivamente
         // l'IP per poter successivamente inviare messaggi sulla chat senza interrogare il server
-        projectMulticastIP.put(projectData[0],chatListener);
+        projectsMulticast.put(projectData[0],chatListener);
         // Faccio eseguire questo task alla ThreadPool
         Future<Void> chatListenerThread = (Future<Void>) listenersPool.submit(chatListener);
         // Aggiungo il riferimento al thread alla lista di threads listener
@@ -896,7 +897,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
             // Interrompo il thread che sta in ascolto sulla chat di questo progetto
             chatListeners.get(projectName).cancel(true);
             // Invio un ultimo messaggio per "sbloccare" la receive
-            ChatListener multicastInfo = projectMulticastIP.get(projectName);
+            ChatListener multicastInfo = projectsMulticast.get(projectName);
             multicastSocket.send(new DatagramPacket(
                     "shutdown".getBytes(StandardCharsets.UTF_8), "shutdown".length(),
                     InetAddress.getByName(multicastInfo.getMulticastIP()), multicastInfo.getMulticastPort()));
@@ -906,7 +907,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
             // Il task listener che si occupava di accodare i messaggi
             chatListeners.remove(projectName);
             // Il riferimento al thread in ascolto sulla chat
-            projectMulticastIP.remove(projectName);
+            projectsMulticast.remove(projectName);
             // Infine, stampo un messaggio di conferma e ripristino la shell
             System.out.println("Ding! "+username+" has canceled the project "+projectName);
             System.out.print(this.username+"@WORTH > ");
