@@ -89,7 +89,7 @@ public class ServerMain extends RemoteObject implements ServerRMI{
                 jacksonMapper.writeValue(Files.newBufferedWriter(pathMulticast),this.multicast);
                 // Inizializzo le strutture dati locali
                 this.users = new ArrayList<>();
-                this.projects = new ConcurrentHashMap<>();
+                this.projects = new LinkedHashMap<>();
             }else {
                 // La directory "data/" esiste, probabilmente
                 // il sistema è già stato avviato prima d'ora
@@ -190,7 +190,7 @@ public class ServerMain extends RemoteObject implements ServerRMI{
 
             // Inizializzo la struttura dati utilizzata per le callbacks,
             // che viene riempita solamente a runtime e non persiste sul disco
-            this.clients = new LinkedHashMap<>();
+            this.clients = new ConcurrentHashMap<>();
 
         } catch (IOException ioe) {
             System.err.println("An error occurred during system bootstrap, closing.");
@@ -1014,7 +1014,7 @@ public class ServerMain extends RemoteObject implements ServerRMI{
                 try { getUser(client.getKey()).setStatus(User.Status.OFFLINE);
                 } catch (UserNotFoundException ignored) {}
                 // Rimuovo l'interfaccia per le callback
-                clients.remove(client.getKey(), client.getValue());
+                clients.remove(client.getKey());
                 // Ho trovato il client disconnesso, mi fermo
                 break;
             }
