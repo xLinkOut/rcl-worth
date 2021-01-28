@@ -587,6 +587,9 @@ public class ServerMain extends RemoteObject implements ServerRMI{
         // Aggiorno il suo stato su Offline
         user.setStatus(User.Status.OFFLINE);
 
+        // Rimuovo il riferimento utilizzato per inviare callback all'utente
+        clients.remove(username);
+
         // Aggiorno tutti gli altri clients con una callback
         // per informarli che l'utente è ora offline
         try { sendCallback(); }
