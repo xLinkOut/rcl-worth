@@ -167,7 +167,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
                                     } catch (ArrayIndexOutOfBoundsException | IllegalArgumentException e) {
                                         // Se almeno uno dei due parametri tra username e password non è presente
                                         // oppure risulta vuoto stampo l'help del comando register
-                                        if (DEBUG) System.out.println(e.getMessage());
+                                        if (DEBUG) e.printStackTrace();
                                         // Visualizzo però, anche se DEBUG == False, il messaggio della exception se riguarda i vincoli sul nome
                                         else if (e.getMessage().contains("Colon")) System.out.println(e.getMessage());
                                         System.out.println("Usage: register username password");
@@ -185,7 +185,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
                                     } catch (ArrayIndexOutOfBoundsException | IllegalArgumentException e) {
                                         // Se almeno uno dei due parametri tra username e password non è presente
                                         // oppure risulta vuoto, stampo l'help del comando login
-                                        if (DEBUG) System.out.println(e.getMessage());
+                                        if (DEBUG) e.printStackTrace();
                                         System.out.println("Usage: login username password");
                                     }
                                     break;
@@ -247,7 +247,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
                                         throw new IllegalArgumentException("Colon character (:) not allowed in project name");
                                     createProject(cmd[1]);
                                 }catch(ArrayIndexOutOfBoundsException | IllegalArgumentException e){
-                                    if (DEBUG) System.out.println(e.getMessage());
+                                    if (DEBUG) e.printStackTrace();
                                     else if (e.getMessage().contains("Colon")) System.out.println(e.getMessage());
                                     System.out.println("Usage: createProject projectName");
                                 }
@@ -259,7 +259,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
                                     // cmd[2] = memberUsername, username dell'utente da inserire
                                     addMember(cmd[1],cmd[2]);
                                 }catch (ArrayIndexOutOfBoundsException | IllegalArgumentException e){
-                                    if (DEBUG) System.out.println(e.getMessage());
+                                    if (DEBUG) e.printStackTrace();
                                     System.out.println("Usage: addMember projectName memberUsername");
                                 }
                                 break;
@@ -269,7 +269,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
                                     // cmd[1] = projectName, nome del progetto
                                     showMembers(cmd[1]);
                                 }catch (ArrayIndexOutOfBoundsException | IllegalArgumentException e) {
-                                    if (DEBUG) System.out.println(e.getMessage());
+                                    if (DEBUG) e.printStackTrace();
                                     System.out.println("Usage: showMembers projectName");
                                 }
                                 break;
@@ -284,7 +284,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
                                         throw new IllegalArgumentException("Colon character (:) not allowed in username\n");
                                     addCard(cmd[1], cmd[2], String.join(" ",Arrays.copyOfRange(cmd,2,cmd.length)));
                                 }catch (ArrayIndexOutOfBoundsException | IllegalArgumentException e){
-                                    if (DEBUG) System.out.println(e.getMessage());
+                                    if (DEBUG) e.printStackTrace();
                                     else if (e.getMessage().contains("Colon")) System.out.println(e.getMessage());
                                     System.out.println("Usage: addCard projectName cardName cardCaption");
                                 } catch (NameAlreadyInUse naiue) {
@@ -299,7 +299,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
                                     // cmd[2] = cardName, nome della card
                                     showCard(cmd[1],cmd[2]);
                                 } catch (ArrayIndexOutOfBoundsException | IllegalArgumentException e) {
-                                    if (DEBUG) System.out.println(e.getMessage());
+                                    if (DEBUG) e.printStackTrace();
                                     System.out.println("Usage: showCard projectName cardName");
                                 }
                                 break;
@@ -314,7 +314,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
                                     // table  = true if the user wants a table version of the cards
                                     showCards(cmd[1], cmd.length == 3);
                                 } catch (ArrayIndexOutOfBoundsException | IllegalArgumentException e) {
-                                    if (DEBUG) System.out.println(e.getMessage());
+                                    if (DEBUG) e.printStackTrace();
                                     System.out.println("Usage: showCards projectName");
                                 }
                                 break;
@@ -327,7 +327,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
                                     // cmd[4] = to, lista in cui si desidera spostare la card
                                     moveCard(cmd[1],cmd[2],cmd[3],cmd[4]);
                                 } catch (ArrayIndexOutOfBoundsException | IllegalArgumentException e) {
-                                    if (DEBUG) System.out.println(e.getMessage());
+                                    if (DEBUG) e.printStackTrace();
                                     System.out.println("Usage: moveCard projectName cardName from to");
                                     System.out.println("Tips: <from> and <to> parameters can be either the names of the lists (todo, inprogress...) or their number (1 for todo, 2 for inprogress, etc...");
                                 }
@@ -339,7 +339,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
                                     // cmd[2] = cardName, nome della card
                                     getCardHistory(cmd[1],cmd[2]);
                                 } catch (ArrayIndexOutOfBoundsException | IllegalArgumentException e) {
-                                    if (DEBUG) System.out.println(e.getMessage());
+                                    if (DEBUG) e.printStackTrace();
                                     System.out.println("Usage: getCardHistory projectName cardName");
                                 }
                                 break;
@@ -349,7 +349,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
                                     // cmd[1] = projectName, nome del progetto
                                     cancelProject(cmd[1]);
                                 } catch (ArrayIndexOutOfBoundsException e) {
-                                    if (DEBUG) System.out.println(e.getMessage());
+                                    if (DEBUG) e.printStackTrace();
                                     System.out.println("Usage: cancelProject projectName");
                                 }
                                 break;
@@ -361,7 +361,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
                                 } catch (ProjectNotFoundException pnfe) {
                                     System.out.println("Can't found "+cmd[1]+", are you sure that exists? Try createProject to create a project");
                                 } catch (ArrayIndexOutOfBoundsException | IllegalArgumentException e) {
-                                    if (DEBUG) System.out.println(e.getMessage());
+                                    if (DEBUG) e.printStackTrace();
                                     System.out.println("Usage: readChat projectName");
                                 }
                                 break;
@@ -375,7 +375,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
                                 } catch (ProjectNotFoundException pnfe) {
                                     System.out.println("Can't found "+cmd[1]+", are you sure that exists? Try createProject to create a project");
                                 } catch (ArrayIndexOutOfBoundsException | IllegalArgumentException e) {
-                                    if (DEBUG) System.out.println(e.getMessage());
+                                    if (DEBUG) e.printStackTrace();
                                     System.out.println("Usage: sendChatMsg projectName message");
                                 } catch (UnknownHostException e) {
                                     System.out.println("I'm not sure if I have the correct address for the project "+cmd[1]+" chat, please try to log out and then log in again");
@@ -883,7 +883,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
     // Il server notifica il client con la lista degli utenti del sistema ed il loro stato
     public void notifyUsers(List<String> users)
             throws RemoteException {
-        if (DEBUG){ System.out.println(users); System.out.print(this.username+"@WORTH > "); }
+        if (DEBUG){ System.out.println("Server@WORTH < "+users.toString()); System.out.print(this.username+"@WORTH > "); }
         // Preparo la lista di utenti per l'aggiornamento, eliminando tutti i vecchi record
         usersStatus.clear();
         // Aggiungo le nuove coppie <utente, stato> alla lista
