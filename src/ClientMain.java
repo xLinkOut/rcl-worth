@@ -474,7 +474,11 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
             username = "Guest";
             // Disiscrivo il client dalla ricezione delle callbacks
             server.unregisterCallback(username, notifyStub);
-
+            // Termino tutti i threads listener attualmente attivi
+            for(Map.Entry<String, Future<Void>> entry : chatListeners.entrySet())
+                entry.getValue().cancel(true);
+            // Svuoto la map chatListeners
+            chatListeners.clear();
             System.out.println(response[1]);
         }else {
             if (DEBUG) System.out.print("["+response[1]+"] ");
