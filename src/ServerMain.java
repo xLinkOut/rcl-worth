@@ -223,6 +223,10 @@ public class ServerMain extends RemoteObject implements ServerRMI{
             // e lo associo al canale, ponendolo in ascolto soltanto sulle "accept"
             serverSocketChannel.register(selector, SelectionKey.OP_ACCEPT);
             System.out.println("[TCP] Listening on <" + PORT_TCP + ">");
+        } catch( BindException be){
+            System.err.println("Only one instance of the server is allowed at the same time, closing.");
+            if (DEBUG) be.printStackTrace();
+            System.exit(-1);
         } catch (IOException ioe) {
             System.err.println("An error occurred during TCP setup, closing.");
             if (DEBUG) ioe.printStackTrace();
@@ -301,7 +305,7 @@ public class ServerMain extends RemoteObject implements ServerRMI{
                                     try {
                                         // cmd[1] = username, nome utente del proprio account
                                         // cmd[2] = password, password del proprio account
-                                        key.attach("ok:Now your are logged as "+cmd[1]+"!:"+login(cmd[1], cmd[2]));
+                                        key.attach("ok:Now you're logged as "+cmd[1]+"!:"+login(cmd[1], cmd[2]));
                                     } catch (AuthenticationFailException afe) {
                                         key.attach("ko:401:The password you entered is incorrect, please try again");
                                     } catch (UserNotFoundException unfe) {
