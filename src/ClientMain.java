@@ -208,8 +208,11 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
                             }
                         } else { System.out.println(msgHelpGuest); }
                     }catch (IOException ioe){
-                        System.err.println("WORTH server seems to be unreachable... try again in a few moments.");
-                        System.exit(-1);
+                        if (DEBUG) ioe.printStackTrace();
+                        if(ioe.getMessage().contains("Broken pipe")){
+                            System.err.println("WORTH server seems to be unreachable... try again in a few moments.");
+                            System.exit(-1);
+                        }
                     }
                 }
 
@@ -386,10 +389,12 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
 
                             case "quit":
                                 System.out.println("Hope to see you soon, "+username+"!");
-                                if(logged){
-                                    server.unregisterCallback(username,notifyStub);
-                                    logout();
-                                }
+                                try{
+                                    if(logged){
+                                        server.unregisterCallback(username,notifyStub);
+                                        logout();
+                                    }
+                                } catch (RemoteException ignored){}
                                 socketChannel.close();
                                 listenersPool.shutdownNow();
                                 System.exit(0);
@@ -402,6 +407,10 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
                     }else{ System.out.println(msgHelp); }
                 } catch (IOException ioe){
                     if (DEBUG) ioe.printStackTrace();
+                    if(ioe.getMessage().contains("Broken pipe")){
+                        System.err.println("WORTH server seems to be unreachable... try again in a few moments.");
+                        System.exit(-1);
+                    }
                 }
             }
 
