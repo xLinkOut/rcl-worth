@@ -4,6 +4,7 @@ import java.net.*;
 import java.util.*;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.concurrent.*;
 import java.rmi.RemoteException;
 import java.rmi.NotBoundException;
 import java.rmi.registry.Registry;
@@ -12,7 +13,6 @@ import java.nio.channels.SocketChannel;
 import java.rmi.registry.LocateRegistry;
 import java.nio.charset.StandardCharsets;
 import java.rmi.server.UnicastRemoteObject;
-import java.util.concurrent.*;
 
 // Eccezioni
 import WorthExceptions.NameAlreadyInUse;
@@ -20,7 +20,6 @@ import WorthExceptions.ProjectNotFoundException;
 import WorthExceptions.UsernameAlreadyTakenException;
 
 // Client WORTH
-@SuppressWarnings({"AccessStaticViaInstance", "DuplicateThrows", "unchecked"})
 public class ClientMain extends RemoteObject implements NotifyEventInterface {
     // * TCP
     private static final int PORT_TCP = 6789;
@@ -87,7 +86,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
 
         // Chats
         this.chats = new HashMap<>();
-        this.usersStatus = new LinkedList<>();
+        this.usersStatus = Collections.synchronizedList(new LinkedList<>());
         this.chatListeners = new LinkedHashMap<>();
         this.projectsMulticast = new LinkedHashMap<>();
         this.listenersPool = (ThreadPoolExecutor) Executors.newCachedThreadPool();
@@ -129,7 +128,6 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
                 // Esporto l'oggetto Client per le callback
                 notifyStub = (NotifyEventInterface)
                         UnicastRemoteObject.exportObject(this,0);
-                //server.registerCallback(stub);
             } catch (NotBoundException nbe) {
                 System.err.println("[RMI] connection refused, are you sure that server is up?");
                 System.exit(-1);
@@ -778,19 +776,23 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
     // Elenca tutti gli utenti del sistema ed il loro stato
     private void listUsers(){
         // ○ == OFFLINE , ● == ONLINE
-        for(String user : usersStatus)
-            if(user.contains("OFFLINE"))
-                System.out.println("○ "+user.substring(8));
-            else
-                System.out.println("● "+user.substring(7));
+        synchronized (usersStatus){
+            for(String user : usersStatus)
+                if(user.contains("OFFLINE"))
+                    System.out.println("○ "+user.substring(8));
+                else
+                    System.out.println("● "+user.substring(7));
+        }
     }
 
     // Elenca solo gli utenti del sistema attualmente ONLINE
     private void listOnlineUsers(){
         // ● == ONLINE
-        for(String user : usersStatus)
-            if(user.contains("ONLINE"))
-                System.out.println("● "+user.substring(7));
+        synchronized (usersStatus){
+            for(String user : usersStatus)
+                if(user.contains("ONLINE"))
+                    System.out.println("● "+user.substring(7));
+        }
     }
 
     // * UTILS
@@ -804,7 +806,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
     // Legge la risposta del server
     private String[] readResponse()
             throws IOException {
-        // Alloco un buffer di <DIM_BUFFER>
+        // Alloco un buffer di 1024 byte
         ByteBuffer msgBuffer = ByteBuffer.allocate(1024);
         // Stringa corrispondente alla risposta del server
         StringBuilder serverResponse = new StringBuilder();
@@ -904,6 +906,7 @@ public class ClientMain extends RemoteObject implements NotifyEventInterface {
     }
 
     @Override
+    // Il server notifica la cancellazione di un progetto di cui l'utente era membro
     public void notifyCancelProject(String projectName, String username)
         throws RemoteException{
         try {

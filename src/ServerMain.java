@@ -28,7 +28,6 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 // Eccezioni
 import WorthExceptions.*;
 
-@SuppressWarnings({"AccessStaticViaInstance", "ResultOfMethodCallIgnored"})
 // Server WORTH
 public class ServerMain extends RemoteObject implements ServerRMI{
     // * TCP
@@ -52,15 +51,15 @@ public class ServerMain extends RemoteObject implements ServerRMI{
     private static Map<String, Project> projects;
 
     private static final String msgStartup =
-            // Le multi-line strings (o text-block) non sono disponibili in Java 8
-            "\n"+
-            "██╗    ██╗ ██████╗ ██████╗ ████████╗██╗  ██╗\n"+
-            "██║    ██║██╔═══██╗██╔══██╗╚══██╔══╝██║  ██║\n"+
-            "██║ █╗ ██║██║   ██║██████╔╝   ██║   ███████║\n"+
-            "██║███╗██║██║   ██║██╔══██╗   ██║   ██╔══██║\n"+
-            "╚███╔███╔╝╚██████╔╝██║  ██║   ██║   ██║  ██║\n"+
-            "╚══╝╚══╝  ╚═════╝ ╚═╝  ╚═╝   ╚═╝   ╚═╝  ╚═╝\n"+
-            "                                   * Server";
+        // Le multi-line strings (o text-block) non sono disponibili in Java 8
+        "\n"+
+        "██╗    ██╗ ██████╗ ██████╗ ████████╗██╗  ██╗\n"+
+        "██║    ██║██╔═══██╗██╔══██╗╚══██╔══╝██║  ██║\n"+
+        "██║ █╗ ██║██║   ██║██████╔╝   ██║   ███████║\n"+
+        "██║███╗██║██║   ██║██╔══██╗   ██║   ██╔══██║\n"+
+        "╚███╔███╔╝╚██████╔╝██║  ██║   ██║   ██║  ██║\n"+
+        "╚══╝╚══╝  ╚═════╝ ╚═╝  ╚═╝   ╚═╝   ╚═╝  ╚═╝\n"+
+        "                                   * Server";
 
     // Inizializza il sistema oppure ripristina l'ultima sessione
     public ServerMain(boolean debug){
@@ -259,11 +258,8 @@ public class ServerMain extends RemoteObject implements ServerRMI{
         while (true) {
             try {
                 // Seleziona un insieme di keys che corrispondono a canali pronti ad eseguire operazioni
-                // TODO: rimuovere prima di consegnare
-                Thread.sleep(300); // Limita overhead
                 selector.select();
-            } catch (IOException ioe) { if (DEBUG) ioe.printStackTrace(); break;
-            } catch (InterruptedException ie) { if (DEBUG) ie.printStackTrace(); }
+            } catch (IOException ioe) { if (DEBUG) ioe.printStackTrace(); break; }
 
             // Iteratore sui canali che risultano pronti
             Iterator<SelectionKey> iterator = selector.selectedKeys().iterator();
@@ -700,8 +696,7 @@ public class ServerMain extends RemoteObject implements ServerRMI{
     private void addCard(String username, String projectName, String cardName, String cardDescription)
             throws ProjectNotFoundException, ForbiddenException, CardAlreadyExists {
 
-        if (DEBUG)
-            System.out.println("Server@WORTH > addCard "+username+" "+projectName+" "+cardName+" "+cardDescription);
+        if (DEBUG) System.out.println("Server@WORTH > addCard "+username+" "+projectName+" "+cardName+" "+cardDescription);
 
         // Controllare che il progetto esista
         if (!projects.containsKey(projectName)) throw new ProjectNotFoundException(projectName);
